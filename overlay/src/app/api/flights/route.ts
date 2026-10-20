@@ -177,6 +177,7 @@ let regionIdx = 0;
 let regionTicker: ReturnType<typeof setInterval> | null = null;
 let lolBackoffUntil = 0;
 let lolBackoffMs = 5 * 60_000;
+let lolLast = '';
 
 async function fetchLolRegion(lat: number, lon: number): Promise<any[] | null> {
   if (Date.now() < lolBackoffUntil) return null;
@@ -185,6 +186,7 @@ async function fetchLolRegion(lat: number, lon: number): Promise<any[] | null> {
       signal: AbortSignal.timeout(15000),
       headers: { 'User-Agent': 'RemoteView (remoteview.online)' },
     });
+    lolLast = `${res.status} rem=${res.headers.get('x-ratelimit-remaining') ?? '?'} @${new Date().toISOString()}`;
     if (res.status === 429) {
       const ra = Number(res.headers.get('retry-after')) * 1000;
       lolBackoffUntil = Date.now() + Math.max(ra || 0, lolBackoffMs);
@@ -193,11 +195,11 @@ async function fetchLolRegion(lat: number, lon: number): Promise<any[] | null> {
       await res.body?.cancel();
       return null;
     }
-    if (!res.ok) { await res.body?.cancel(); return null; }
+    if (!res.ok) { console.warn('[REMOTEVIEW] adsb.lol region', lolLast); await res.body?.cancel(); return null; }
     lolBackoffMs = 5 * 60_000;
     const data = await res.json();
     return data.ac || [];
-  } catch { return null; }
+  } catch (e) { lolLast = 'error ' + String(e).slice(0, 80); return null; }
 }
 
 async function refreshRegion(r: { id: string; lat: number; lon: number }) {
@@ -545,6 +547,7 @@ export async function GET() {
         adsbfi_mil:      milCount,
         regional:        openSkyWorked ? 0 : allRaw.length - milCount,
         regions_ready:   regionSnap.size,
+        adsblol_last:    lolLast,
         adsblol_backoff_s: Math.max(0, Math.round((lolBackoffUntil - Date.now()) / 1000)),
         opensky:         osSnapshot.length,
         opensky_auth:    hasOpenSkyCreds(),
