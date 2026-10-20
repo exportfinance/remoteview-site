@@ -445,7 +445,61 @@ async function collectEthereumRpc(address: string): Promise<RawWallet> {
 }
 
 async function collectSolana(address: string): Promise<RawWallet> {
-  const url = 'https://api.mainnet-beta.solana.com';
+  const key = process.env.HELIUS_API_KEY;
+  if (key) {
+    try { return await collectSolanaHelius(address, key); }
+    catch (e) { console.warn('[REMOTEVIEW] Helius failed, falling back:', e instanceof Error ? e.message : e); }
+  }
+  return collectSolanaPublic(address, 'https://api.mainnet-beta.solana.com');
+}
+
+/** Helius: keyed RPC for balance/tokens + Enhanced Transactions API for amounts and counterparties. */
+async function collectSolanaHelius(address: string, key: string): Promise<RawWallet> {
+  const url = `https://mainnet.helius-rpc.com/?api-key=${encodeURIComponent(key)}`;
+  const base = await collectSolanaPublic(address, url);
+  base.sources = ['Helius'];
+  base.partial = base.partial.filter(p => !p.includes('HELIUS_API_KEY'));
+  try {
+    let txs: any = null;
+    for (let i = 0; i < 2 && !txs; i++) {
+      try {
+        txs = await getJson(`https://api.helius.xyz/v0/addresses/${encodeURIComponent(address)}/transactions?api-key=${encodeURIComponent(key)}&limit=50`, 20000);
+      } catch (e) { if (i) throw e; }
+    }
+    const items: any[] = Array.isArray(txs) ? txs : [];
+    if (items.length) {
+      base.transactions = items.map((t: any): TxSummary => {
+        const nt: any[] = t.nativeTransfers || [];
+        const out = nt.filter(x => x.fromUserAccount === address && x.toUserAccount !== address);
+        const inn = nt.filter(x => x.toUserAccount === address && x.fromUserAccount !== address);
+        const outAmt = out.reduce((s, x) => s + (Number(x.amount) || 0), 0) / 1e9;
+        const inAmt = inn.reduce((s, x) => s + (Number(x.amount) || 0), 0) / 1e9;
+        const direction: TxSummary['direction'] = outAmt && inAmt ? 'self' : outAmt ? 'out' : inAmt ? 'in' : 'unknown';
+        const cp = direction === 'out' ? out.sort((a, b) => b.amount - a.amount)[0]?.toUserAccount
+          : direction === 'in' ? inn.sort((a, b) => b.amount - a.amount)[0]?.fromUserAccount : null;
+        return {
+          hash: t.signature,
+          time: t.timestamp ? new Date(t.timestamp * 1000).toISOString() : null,
+          direction,
+          value: direction === 'out' ? outAmt : inAmt,
+          counterparty: cp || null,
+          fee: typeof t.fee === 'number' ? t.fee / 1e9 : undefined,
+          failed: !!t.transactionError,
+        };
+      });
+      const tIn = base.transactions.filter(t => t.direction === 'in').reduce((s, t) => s + t.value, 0);
+      const tOut = base.transactions.filter(t => t.direction === 'out').reduce((s, t) => s + t.value, 0);
+      base.flow = { total_in: tIn, total_out: tOut, net: tIn - tOut };
+      base.tx_count = Math.max(base.tx_count, items.length);
+      base.sources.push('Helius Enhanced Transactions');
+    }
+  } catch (e) {
+    base.partial.push(`Helius transfer detail unavailable (${e instanceof Error ? e.message.replace(/api-key=[^&\s]+/g, 'api-key=***') : 'error'})`);
+  }
+  return base;
+}
+
+async function collectSolanaPublic(address: string, url: string): Promise<RawWallet> {
   const lamports = await rpc(url, 'getBalance', [address]);
   const balance = (Number(lamports?.value) || 0) / 1e9;
 
@@ -466,7 +520,7 @@ async function collectSolana(address: string): Promise<RawWallet> {
   } catch (e) {
     partial.push(`signature history unavailable (${e instanceof Error ? e.message : 'error'})`);
   }
-  partial.push('Solana transfer amounts and counterparties require a keyed RPC provider (HELIUS_API_KEY)');
+  if (!url.includes('helius')) partial.push('Solana transfer amounts and counterparties require a keyed RPC provider (HELIUS_API_KEY)');
 
   let tokens: RawWallet['tokens'] = [];
   try {
