@@ -26,31 +26,38 @@ export async function GET(req: Request) {
 
     // RDAP (Registration Data Access Protocol) — successor to WHOIS
     try {
-      // rdap.org redirects to the registry; try it, then the registry directly
-      // via the IANA bootstrap file. Retries + longer timeout.
+      // Registry RDAP first (known TLDs, then IANA bootstrap), rdap.org last —
+      // rdap.org sits behind Cloudflare and 403s datacenter/Node clients.
+      const KNOWN: Record<string, string> = {
+        com: 'https://rdap.verisign.com/com/v1/', net: 'https://rdap.verisign.com/net/v1/',
+        org: 'https://rdap.publicinterestregistry.org/rdap/', io: 'https://rdap.identitydigital.services/rdap/',
+        uk: 'https://rdap.nominet.uk/uk/', online: 'https://rdap.centralnic.com/online/',
+        dev: 'https://pubapi.registry.google/rdap/', app: 'https://pubapi.registry.google/rdap/',
+      };
+      const rdapErrors: string[] = [];
+      const tld = domain.toLowerCase().split('.').pop()!;
+      const bases: string[] = [];
+      if (KNOWN[tld]) bases.push(KNOWN[tld]);
+      try {
+        const boot = await fetch('https://data.iana.org/rdap/dns.json', { signal: AbortSignal.timeout(10000), cache: 'force-cache' } as RequestInit).then(r => r.json());
+        const svc = (boot.services || []).find((s: any) => s[0].includes(tld));
+        for (const u of svc?.[1] || []) if (!bases.includes(u)) bases.push(u);
+      } catch (e) { rdapErrors.push(`iana: ${e instanceof Error ? e.message : e}`); }
+      bases.push('https://rdap.org/');
       let res: Response | null = null;
-      for (let i = 0; i < 2 && !res; i++) {
-        try {
-          const r = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`, {
-            signal: AbortSignal.timeout(12000), headers: { 'Accept': 'application/rdap+json, application/json' },
-          });
-          if (r.ok) res = r;
-        } catch { /* retry */ }
-      }
-      if (!res) {
-        try {
-          const boot = await fetch('https://data.iana.org/rdap/dns.json', { signal: AbortSignal.timeout(10000) }).then(r => r.json());
-          const tld = domain.toLowerCase().split('.').pop()!;
-          const svc = (boot.services || []).find((s: any) => s[0].includes(tld));
-          const base = svc?.[1]?.[0];
-          if (base) {
+      for (const base of bases) {
+        for (let i = 0; i < 2 && !res; i++) {
+          try {
             const r = await fetch(`${base.replace(/\/$/, '')}/domain/${encodeURIComponent(domain)}`, {
-              signal: AbortSignal.timeout(12000), headers: { 'Accept': 'application/rdap+json, application/json' },
+              signal: AbortSignal.timeout(12000),
+              headers: { 'Accept': 'application/rdap+json, application/json', 'User-Agent': 'Mozilla/5.0 (RemoteView-OSINT)' },
             });
-            if (r.ok) res = r;
-          }
-        } catch (e) { console.warn('[REMOTEVIEW] RDAP bootstrap failed:', e instanceof Error ? e.message : e); }
+            if (r.ok) res = r; else { rdapErrors.push(`${new URL(base).host}: ${r.status}`); if (r.status === 404) break; }
+          } catch (e) { rdapErrors.push(`${new URL(base).host}: ${e instanceof Error ? e.message : e}`); }
+        }
+        if (res) break;
       }
+      if (!res && rdapErrors.length) results.rdap_error = rdapErrors.join('; ');
       if (res) {
         const data = await res.json();
         results.rdap = {
