@@ -152,6 +152,81 @@ async function fetchAdsbFiRegion(lat: number, lon: number): Promise<any[]> {
   return fetchRegionFrom(ADSBFI_BASE, lat, lon);
 }
 
+
+// ── Regional coverage, budgeted ───────────────────────────────────────────────
+// adsb.lol allows 500 requests/day (60/min, 4/s) per IP and serves up to a
+// 1000 nm radius. Nine big circles cover the busy airspace; one region is
+// refreshed every REGION_TICK_MS on a rotating timer, so each updates roughly
+// every 30 minutes and the day's spend stays near 430 requests. Each region
+// keeps its own last-good snapshot and a degraded refresh (under half the last
+// count) never replaces it. adsb.fi (250 nm cap) is the per-region fallback.
+const BIG_REGIONS = [
+  { id: 'na-east', lat: 38, lon: -85 },
+  { id: 'na-west', lat: 40, lon: -112 },
+  { id: 'eu-west', lat: 48, lon: 2 },
+  { id: 'eu-east', lat: 50, lon: 25 },
+  { id: 'mideast', lat: 28, lon: 48 },
+  { id: 'india',   lat: 22, lon: 78 },
+  { id: 'e-asia',  lat: 33, lon: 125 },
+  { id: 'se-asia', lat: 8,  lon: 106 },
+  { id: 'aus',     lat: -28, lon: 140 },
+];
+const REGION_TICK_MS = 200_000;
+const regionSnap = new Map<string, { ac: any[]; at: number }>();
+let regionIdx = 0;
+let regionTicker: ReturnType<typeof setInterval> | null = null;
+let lolBackoffUntil = 0;
+let lolBackoffMs = 5 * 60_000;
+
+async function fetchLolRegion(lat: number, lon: number): Promise<any[] | null> {
+  if (Date.now() < lolBackoffUntil) return null;
+  try {
+    const res = await fetch(`https://api.adsb.lol/v2/lat/${lat}/lon/${lon}/dist/1000`, {
+      signal: AbortSignal.timeout(15000),
+      headers: { 'User-Agent': 'RemoteView (remoteview.online)' },
+    });
+    if (res.status === 429) {
+      const ra = Number(res.headers.get('retry-after')) * 1000;
+      lolBackoffUntil = Date.now() + Math.max(ra || 0, lolBackoffMs);
+      lolBackoffMs = Math.min(lolBackoffMs * 2, 60 * 60_000);
+      console.warn('[REMOTEVIEW] adsb.lol 429 — backing off', Math.round((lolBackoffUntil - Date.now()) / 1000), 's');
+      await res.body?.cancel();
+      return null;
+    }
+    if (!res.ok) { await res.body?.cancel(); return null; }
+    lolBackoffMs = 5 * 60_000;
+    const data = await res.json();
+    return data.ac || [];
+  } catch { return null; }
+}
+
+async function refreshRegion(r: { id: string; lat: number; lon: number }) {
+  let ac = await fetchLolRegion(r.lat, r.lon);
+  if (!ac || ac.length === 0) ac = await fetchRegionFrom(ADSBFI_BASE, r.lat, r.lon);
+  const prev = regionSnap.get(r.id);
+  if (!ac.length) return;
+  if (prev && ac.length < prev.ac.length * 0.5 && Date.now() - prev.at < 2 * 60 * 60_000) {
+    console.warn(`[REMOTEVIEW] region ${r.id} degraded (${ac.length} vs ${prev.ac.length}) — keeping last good`);
+    return;
+  }
+  regionSnap.set(r.id, { ac, at: Date.now() });
+}
+
+function ensureRegionTicker() {
+  if (regionTicker) return;
+  // Cold start: fill every region once, paced at ~1 req/s (9 requests).
+  (async () => {
+    for (const r of BIG_REGIONS) {
+      await refreshRegion(r);
+      await new Promise(res => setTimeout(res, 1100));
+    }
+  })();
+  regionTicker = setInterval(() => {
+    const r = BIG_REGIONS[regionIdx++ % BIG_REGIONS.length];
+    refreshRegion(r).catch(() => {});
+  }, REGION_TICK_MS);
+}
+
 function classifyFlight(f: any) {
   const modelUpper = (f.t || '').toUpperCase();
   const flightStr = (f.flight || '').trim().toUpperCase();
@@ -227,6 +302,7 @@ function classifyFlight(f: any) {
 }
 
 let cachedData: any = null;
+let lastGood: any = null;
 let lastFetchTime = 0;
 // 90s TTL keeps us well within the authenticated OpenSky budget (4000 credits/day,
 // 4 credits/call = 1000 calls/day ≈ one per 86s). The old 45s TTL at ~1920 calls/day
@@ -424,22 +500,10 @@ export async function GET() {
     // 60s maxDuration above.
     if (!openSkyWorked) {
       source = 'regional';
-      console.warn('[REMOTEVIEW] no OpenSky snapshot — falling back to adsb.fi regional sweep');
-
-      // Small parallel batches keep the sweep well inside maxDuration.
-      for (let i = 0; i < REGIONS.length; i += 4) {
-        const batch = await Promise.all(REGIONS.slice(i, i + 4).map(r => fetchAdsbFiRegion(r.lat, r.lon)));
-        for (const ac of batch) ingestAc(ac, allRaw, seenHex);
-        await new Promise(resolve => setTimeout(resolve, 400));
-      }
-
-      if (allRaw.length === 0) {
-        console.error(
-          '[REMOTEVIEW] every flight provider returned zero aircraft — ' +
-          'set OPENSKY_CLIENT_ID/OPENSKY_CLIENT_SECRET (free at opensky-network.org); ' +
-          'the anonymous 400 credits/day pool cannot sustain a live map'
-        );
-      }
+      ensureRegionTicker();
+      // Merge every region's last-good snapshot by hex; the military feed above
+      // already claimed its hexes, so those stay current.
+      for (const r of BIG_REGIONS) ingestAc(regionSnap.get(r.id)?.ac || [], allRaw, seenHex);
     } else {
       source = hasOpenSkyCreds() ? 'opensky-auth' : 'opensky-anon';
     }
@@ -479,7 +543,9 @@ export async function GET() {
       // is visible in the payload rather than silently emptying the map.
       providers: {
         adsbfi_mil:      milCount,
-        adsbfi_regional: openSkyWorked ? 0 : allRaw.length - milCount,
+        regional:        openSkyWorked ? 0 : allRaw.length - milCount,
+        regions_ready:   regionSnap.size,
+        adsblol_backoff_s: Math.max(0, Math.round((lolBackoffUntil - Date.now()) / 1000)),
         opensky:         osSnapshot.length,
         opensky_auth:    hasOpenSkyCreds(),
         opensky_age_s:   osSnapshotTime ? Math.round((Date.now() - osSnapshotTime) / 1000) : null,
@@ -489,10 +555,17 @@ export async function GET() {
   })();
 
   try {
-    const data = await fetchPromise;
+    let data = await fetchPromise;
+    fetchPromise = null;
+    // Never swap a good payload for a degraded one.
+    if (lastGood && data.total < lastGood.total * 0.5) {
+      console.warn(`[REMOTEVIEW] flights degraded (${data.total} vs ${lastGood.total}) — serving last good`);
+      data = { ...lastGood, source: (lastGood.source || '') + '+lastgood' };
+    } else {
+      lastGood = data;
+    }
     cachedData = data;
     lastFetchTime = Date.now();
-    fetchPromise = null;
     return NextResponse.json(data, {
       headers: {
         'Cache-Control': data.total < 100 ? 'no-store, max-age=0' : 'public, s-maxage=30, stale-while-revalidate=60',
