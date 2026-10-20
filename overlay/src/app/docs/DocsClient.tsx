@@ -731,7 +731,6 @@ mcp_servers:
           <footer className="border-t border-white/[0.06] pt-6 pb-16 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-mono text-[var(--text-muted)]">
             {[
               { href: 'https://remoteview.online', label: 'GitHub' },
-              { href: 'https://discord.gg/EPaFD5FFKf', label: 'Discord' },
               { href: 'https://remoteview.online', label: 'Report an issue' },
             ].map(l => (
               <a
