@@ -252,6 +252,77 @@ async function collectBitcoin(address: string): Promise<RawWallet> {
 }
 
 async function collectEthereum(address: string): Promise<RawWallet> {
+  if (process.env.ETHERSCAN_API_KEY) {
+    try { return await collectEthereumEtherscan(address); }
+    catch (e) { console.warn('[REMOTEVIEW] Etherscan failed, falling back:', e instanceof Error ? e.message : e); }
+  }
+  return collectEthereumBlockscout(address);
+}
+
+/** Etherscan V2 (chainid=1). Free tier: 3 req/s, so calls are sequenced lightly. */
+async function collectEthereumEtherscan(address: string): Promise<RawWallet> {
+  const key = process.env.ETHERSCAN_API_KEY!;
+  const call = async (params: Record<string, string>) => {
+    const qs = new URLSearchParams({ chainid: '1', ...params, apikey: key });
+    let last: unknown = null;
+    for (let i = 0; i < 2; i++) {
+      try {
+        const res = await fetch(`https://api.etherscan.io/v2/api?${qs}`, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`etherscan responded ${res.status}`);
+        const j = await res.json();
+        if (j.jsonrpc) { if (j.error) throw new Error(j.error.message || 'rpc error'); return j.result; }
+        if (j.status === '1' || (j.status === '0' && /No transactions found/i.test(j.message || ''))) return j.result;
+        throw new Error(typeof j.result === 'string' ? j.result : j.message || 'etherscan error');
+      } catch (e) { last = e; await new Promise(r => setTimeout(r, 400)); }
+    }
+    throw last instanceof Error ? last : new Error('etherscan failed');
+  };
+  const [balWei, txs, nonce, code] = await Promise.all([
+    call({ module: 'account', action: 'balance', address, tag: 'latest' }),
+    call({ module: 'account', action: 'txlist', address, startblock: '0', endblock: '99999999', page: '1', offset: String(TX_PAGE), sort: 'desc' }),
+    new Promise(r => setTimeout(r, 1100)).then(() => call({ module: 'proxy', action: 'eth_getTransactionCount', address, tag: 'latest' })).catch(() => null),
+    new Promise(r => setTimeout(r, 1100)).then(() => call({ module: 'proxy', action: 'eth_getCode', address, tag: 'latest' })).catch(() => null),
+  ]);
+  const lower = address.toLowerCase();
+  const items: any[] = Array.isArray(txs) ? txs : [];
+  const transactions: TxSummary[] = items.map((t: any): TxSummary => {
+    const from = (t.from || '').toLowerCase();
+    const to = (t.to || t.contractAddress || '').toLowerCase();
+    const direction: TxSummary['direction'] =
+      from === lower && to === lower ? 'self' : from === lower ? 'out' : to === lower ? 'in' : 'unknown';
+    return {
+      hash: t.hash,
+      time: t.timeStamp ? new Date(Number(t.timeStamp) * 1000).toISOString() : null,
+      direction,
+      value: Number(t.value || 0) / 1e18,
+      counterparty: direction === 'out' ? t.to || t.contractAddress || null : t.from || null,
+      fee: t.gasUsed && t.gasPrice ? (Number(t.gasUsed) * Number(t.gasPrice)) / 1e18 : undefined,
+      failed: t.isError === '1',
+    };
+  });
+  const flow = transactions.length
+    ? {
+        total_in: transactions.filter(t => t.direction === 'in').reduce((s, t) => s + t.value, 0),
+        total_out: transactions.filter(t => t.direction === 'out').reduce((s, t) => s + t.value, 0),
+        net: 0,
+      }
+    : null;
+  if (flow) flow.net = flow.total_in - flow.total_out;
+  const sent = nonce ? Number(BigInt(nonce as string)) : 0;
+  return {
+    balance: Number(BigInt(balWei)) / 1e18,
+    tx_count: Math.max(items.length, sent),
+    history_complete: items.length < TX_PAGE,
+    flow,
+    transactions,
+    labels: code && code !== '0x' ? ['Code at address (contract or delegated EOA)'] : [],
+    tokens: [],
+    sources: ['Etherscan V2'],
+    partial: items.length >= TX_PAGE ? [`showing latest ${TX_PAGE} normal transactions; tx_count is outgoing nonce`] : [],
+  };
+}
+
+async function collectEthereumBlockscout(address: string): Promise<RawWallet> {
   const base = 'https://eth.blockscout.com/api/v2';
   let info: any = null;
   for (let i = 0; i < 2 && !info; i++) {
