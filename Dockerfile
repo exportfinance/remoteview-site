@@ -2,6 +2,7 @@ FROM node:22-alpine AS src
 WORKDIR /app
 COPY bundle/ /bundle/
 RUN cat /bundle/part* | base64 -d | tar xz -C /app
+COPY tools/ /app/tools/
 
 FROM node:22-alpine AS deps
 WORKDIR /app
