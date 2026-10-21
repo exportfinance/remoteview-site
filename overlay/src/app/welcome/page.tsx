@@ -4,8 +4,8 @@ import { founderUsed } from '@/lib/accounts';
 import { PUBLIC_URL } from '@/lib/publicUrl';
 
 export const dynamic = 'force-dynamic';
-const TITLE = 'RemoteView: the whole world, live, in one screen';
-const DESC = 'Live aircraft, ships, satellites, hazards, weather and country risk on one 3D globe, with AI briefings that summarise what changed. Start a 7-day free trial.';
+const TITLE = 'RemoteView: real-time global intelligence, as it happens';
+const DESC = 'Real-time global intelligence on one live map: conflict signals and situation rooms, internet outages and infrastructure, shipping chokepoints, country risk and breaking disasters, with AI briefings that cite their sources. 7-day free trial.';
 
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -13,21 +13,21 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { absolute: TITLE }, description: DESC, metadataBase: new URL(PUBLIC_URL),
     alternates: { canonical: '/' },
     robots: { index: true, follow: true },
-    openGraph: { title: TITLE, description: DESC, url: PUBLIC_URL + '/', siteName: 'RemoteView', type: 'website', images: [{ url: '/landing/og.jpg', width: 1200, height: 630, alt: 'RemoteView live globe' }] },
+    openGraph: { title: TITLE, description: DESC, url: PUBLIC_URL + '/', siteName: 'RemoteView', type: 'website', images: [{ url: '/landing/og.jpg', width: 1200, height: 630, alt: 'RemoteView live intelligence map' }] },
     twitter: { card: 'summary_large_image', title: TITLE, description: DESC, images: ['/landing/og.jpg'] },
   };
 }
 
 const FEATURES = [
-  ['Live air traffic', 'Thousands of aircraft from open ADS-B data, with private and government jet spotting and flight arrival estimates.'],
-  ['Ships and chokepoints', 'Vessel positions, tanker and LNG flows, and the world\u2019s shipping chokepoints on one layer.'],
+  ['Conflict signals and situation rooms', 'Unrest and conflict-related events from GDELT, GPS jamming hot spots and military aircraft activity, pulled together into situation rooms you can watch for any region.'],
+  ['Infrastructure and outages', 'Internet outage alerts by country from IODA, submarine cables and landing points, power plants and exploited-vulnerability feeds.'],
+  ['Shipping chokepoints', 'Live vessel positions and slow-moving traffic at Hormuz, Bab el-Mandeb, Suez, Malacca and the other chokepoints that move world trade.'],
+  ['Economic and country risk', 'OECD country risk, FCDO and US State Department travel advice, World Bank indicators and a combined 0\u2013100 risk score for every country.'],
+  ['Breaking disasters', 'Earthquakes, tsunamis, volcanoes, wildfires, smoke and tropical storms from USGS, NOAA and NASA, the moment they are published.'],
   ['AI briefings', 'Ask the map a question, or get a briefing of what changed in the last 24 hours. Every answer names its sources.'],
-  ['Hazards in real time', 'Earthquakes, volcanoes, tsunamis, wildfires, smoke, storms and severe weather alerts from NASA, NOAA and USGS.'],
-  ['Space and satellites', 'Satellites by category, the ISS ground track, launches, fireballs, aurora and space weather.'],
-  ['Country risk dossiers', 'OECD risk, FCDO and US State Department advice, World Bank indicators and a combined 0\u2013100 risk score.'],
   ['Sanctions search', 'Search the official US OFAC, UK and EU sanctions lists in one place, and see targets mapped by country.'],
-  ['Cyber and infrastructure', 'Exploited vulnerabilities, threat groups, internet outages, submarine cables and power plants.'],
   ['Investigation tools', 'Link graphs, a 24-hour replay scrubber, case files and one-click PDF reports for any country.'],
+  ['Air, space and weather', 'Live aircraft from open ADS-B data, satellites and launches, space weather and severe weather alerts.'],
 ];
 
 const PLANS = [
@@ -125,7 +125,7 @@ body:has([data-rv-landing])>a[href="/credits"]{display:none}
 .rvl-tgt span{position:absolute;left:54px;top:12px;font:10px 'JetBrains Mono',monospace;letter-spacing:.15em;color:#5eead4;white-space:nowrap}
 @keyframes rvltg{0%{opacity:0;transform:scale(2.2)}60%{opacity:1}100%{opacity:1;transform:scale(1)}}
 .rvl-hero h1{position:relative}
-.rvl-dec{position:absolute;inset:0;pointer-events:none}
+.rvl-dec{position:absolute;inset:0;pointer-events:none;display:block;font-weight:inherit}
 .rvl-decoding{color:transparent!important}.rvl-decoding span{color:transparent!important;-webkit-text-fill-color:transparent!important}
 .rvl-glitch{position:relative}
 .rvl-glitch:hover{animation:rvlgl .35s steps(2) 1}
@@ -141,7 +141,7 @@ body:has([data-rv-landing])>a[href="/credits"]{display:none}
 @media(max-width:860px){.rvl-grid{grid-template-columns:1fr}.rvl-shots{grid-template-columns:1fr}.rvl-row{grid-template-columns:1fr}.rvl-navlinks .rvl-hide{display:none}.rvl-sec{padding:64px 0}}
 `;
 
-const reveal = `(()=>{const h=document.querySelector('.rvl-hero h1');if(h&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const T=h.textContent,C='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%/<>',o=document.createElement('div');o.className='rvl-dec';o.setAttribute('aria-hidden','true');h.appendChild(o);h.classList.add('rvl-decoding');o.style.color='#e6f1ff';let f=0;const n=T.length,tick=()=>{f++;const k=Math.floor(f*n/38);let out='';for(let i=0;i<n;i++){const c=T[i];out+=(i<k||c===' '||c===','||c==='.')?c:C[(Math.random()*C.length)|0]}o.textContent=out;if(k<n)requestAnimationFrame(tick);else{o.remove();h.classList.remove('rvl-decoding')}};setTimeout(()=>requestAnimationFrame(tick),250)}})();(()=>{const r=document.querySelector('.rvl');if(!r||!('IntersectionObserver' in window))return;r.classList.add('rvl-js');const io=new IntersectionObserver((es)=>{for(const e of es)if(e.isIntersecting){e.target.classList.add('rvl-in');io.unobserve(e.target)}},{root:r,rootMargin:'0px 0px -8% 0px',threshold:.08});const m=r.querySelector('.rvl-mcta'),w=r.querySelector('#start');if(m)r.addEventListener('scroll',()=>{const wb=w?w.getBoundingClientRect():null;m.classList.toggle('on',r.scrollTop>innerHeight*.7&&!(wb&&wb.top<innerHeight&&wb.bottom>0))},{passive:true});r.querySelectorAll('.rvl-r').forEach(el=>{const b=el.getBoundingClientRect();if(b.top<innerHeight)el.classList.add('rvl-in');io.observe(el)})})();`;
+const reveal = `(()=>{const h=document.querySelector('.rvl-hero h1');if(h&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const T=h.textContent||'',C='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%/<>',o=h.querySelector('.rvl-dec');if(!o)return;h.classList.add('rvl-decoding');o.style.color='#e6f1ff';let f=0;const n=T.length,tick=()=>{f++;const k=Math.floor(f*n/38);let out='';for(let i=0;i<n;i++){const c=T[i];out+=(i<k||c===' '||c===','||c==='.')?c:C[(Math.random()*C.length)|0]}o.textContent=out;if(k<n)requestAnimationFrame(tick);else{o.textContent='';h.classList.remove('rvl-decoding')}};setTimeout(()=>requestAnimationFrame(tick),250)}})();(()=>{const r=document.querySelector('.rvl');if(!r||!('IntersectionObserver' in window))return;r.classList.add('rvl-js');const io=new IntersectionObserver((es)=>{for(const e of es)if(e.isIntersecting){e.target.classList.add('rvl-in');io.unobserve(e.target)}},{root:r,rootMargin:'0px 0px -8% 0px',threshold:.08});const m=r.querySelector('.rvl-mcta'),w=r.querySelector('#start');if(m)r.addEventListener('scroll',()=>{const wb=w?w.getBoundingClientRect():null;m.classList.toggle('on',r.scrollTop>innerHeight*.7&&!(wb&&wb.top<innerHeight&&wb.bottom>0))},{passive:true});r.querySelectorAll('.rvl-r').forEach(el=>{const b=el.getBoundingClientRect();if(b.top<innerHeight)el.classList.add('rvl-in');io.observe(el)})})();`;
 
 export default async function Welcome() {
   const live = billingEnabled();
@@ -163,8 +163,8 @@ export default async function Welcome() {
         {[['62%', '34%', 'TRACK 01', '.9s', ''], ['74%', '58%', 'TRACK 02', '1.4s', ' rvl-tgt-x'], ['55%', '66%', 'TRACK 03', '1.9s', ' rvl-tgt-x'], ['82%', '28%', 'TRACK 04', '2.4s', '']].map(([l, t, n, d, x]) => <div key={n} className={'rvl-tgt' + x} aria-hidden="true" style={{ left: l, top: t, animationDelay: d }}><span>{n}</span></div>)}
         <div className="rvl-wrap">
         <div className="rvl-kicker rvl-mono">// LIVE NOW · 7-DAY FREE TRIAL</div>
-        <h1>The whole world, live, <span>in one screen.</span></h1>
-        <p className="rvl-lead">Aircraft, ships, satellites, hazards, weather and country risk on a single 3D globe, with AI briefings that tell you what changed and why it matters.</p>
+        <h1>Critical world events, <span>as they happen.</span><b className="rvl-dec" aria-hidden="true" suppressHydrationWarning /></h1>
+        <p className="rvl-lead">Real-time intelligence on one live map: conflict signals and situation rooms, internet outages, shipping chokepoints, country risk and breaking disasters, with AI briefings that tell you what changed and why it matters.</p>
         <div className="rvl-cta"><a className="rvl-btn rvl-glitch" href="/pricing">Start 7-day free trial</a><a className="rvl-ghost rvl-glitch" href="/demo">Try the live demo</a></div>
         {founderOpen && <div className="rvl-count"><span className="rvl-dot" />Founder offer: 50% off forever for the first 500</div>}
       </div></header>
@@ -218,7 +218,7 @@ export default async function Welcome() {
 
       <footer className="rvl-foot"><div className="rvl-wrap">
         <div>© {new Date().getFullYear()} RemoteView</div>
-        <div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/credits">Data credits</a><a href="/demo">Demo</a><a href="https://discord.gg/T6VuJTnKC" target="_blank" rel="noopener noreferrer">Discord</a><a href="/login">Sign in</a></div>
+        <div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/credits">Data credits</a><a href="/demo">Demo</a><a href="https://discord.gg/T6VuJTnKC" target="_blank" rel="noopener noreferrer">Discord</a><a href="mailto:remoteview@mail.grokbot.com">remoteview@mail.grokbot.com</a><a href="/account?signin=1">Sign in</a></div>
       </div></footer>
       <div className="rvl-mcta"><a className="rvl-ghost" style={{ background: 'rgba(3,9,18,.92)' }} href="/demo">Live demo</a><a className="rvl-btn" href="/pricing">Start free trial</a></div>
       <script dangerouslySetInnerHTML={{ __html: reveal }} />

@@ -20,7 +20,7 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export const metadata: Metadata = {
+const privateMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: SITE_TITLE,
@@ -119,6 +119,20 @@ export const metadata: Metadata = {
     "msapplication-config": "none",
   },
 };
+
+const C_DESC = 'Real-time global intelligence on one live map: conflict signals and situation rooms, internet outages and infrastructure, shipping chokepoints, country risk and breaking disasters, with AI briefings that cite their sources.';
+const C_URL = 'https://www.remoteview.online';
+const commercialMetadata: Metadata = {
+  metadataBase: new URL(C_URL),
+  title: { default: 'RemoteView: real-time global intelligence', template: '%s · RemoteView' },
+  description: C_DESC,
+  applicationName: 'RemoteView',
+  icons: privateMetadata.icons,
+  manifest: '/manifest.json',
+  openGraph: { title: 'RemoteView: real-time global intelligence', description: C_DESC, type: 'website', siteName: 'RemoteView', locale: 'en_US', url: C_URL, images: [{ url: C_URL + '/landing/og.jpg', width: 1200, height: 630, alt: 'RemoteView live intelligence map' }] },
+  twitter: { card: 'summary_large_image', title: 'RemoteView: real-time global intelligence', description: C_DESC, images: [C_URL + '/landing/og.jpg'] },
+};
+export const metadata: Metadata = IS_COMMERCIAL ? commercialMetadata : privateMetadata;
 
 // JSON-LD Structured Data
 const jsonLd = {

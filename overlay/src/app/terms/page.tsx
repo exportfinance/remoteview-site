@@ -5,8 +5,6 @@ export default function Terms() {
   return (
     <LegalShell title="Terms of use" updated="21 October 2026">
       <p>These terms cover this website, RemoteView accounts and paid subscriptions.</p>
-      <h2>Waitlist</h2>
-      <p>Joining the waitlist does not create any obligation for you or for us.</p>
       <h2 id="subscriptions">Subscriptions, cancellation and refunds <span style={{ color: '#fbbf24', fontSize: 13 }}>(DRAFT, not yet reviewed by a lawyer)</span></h2>
       <ul>
         <li><b>Plans and prices.</b> Personal is $19.99 a month or $199 a year; Pro is $49.50 a month or $495 a year, in US dollars. Taxes are added where the law requires. Teams is quoted separately.</li>
@@ -29,7 +27,9 @@ export default function Terms() {
         <li>Respect each data source&apos;s licence and attribution, listed on the <a href="/credits">data credits</a> page.</li>
       </ul>
       <h2>Availability and liability</h2>
-      <p>The preview is provided as is, without warranties, and may change or stop at any time. To the extent the law allows, we are not liable for losses arising from its use. Nothing in these terms limits liability that cannot be limited by law.</p>
+      <p>The service is provided as is, without warranties, and may change or stop at any time. To the extent the law allows, we are not liable for losses arising from its use. Nothing in these terms limits liability that cannot be limited by law.</p>
+      <h2>Contact</h2>
+      <p>Questions about these terms or your subscription: <a href="mailto:remoteview@mail.grokbot.com">remoteview@mail.grokbot.com</a>.</p>
       <h2>Software</h2>
       <p>RemoteView is built on MIT-licensed source code; the licence notice ships with the code.</p>
     </LegalShell>
