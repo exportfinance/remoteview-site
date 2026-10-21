@@ -61,7 +61,17 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: '/(.*)',
+        // Embeds are meant to be framed by any site (the backlink engine); everything else stays same-origin.
+        source: '/embed/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "default-src 'self' 'unsafe-inline' https: data:; frame-ancestors *;" },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Cache-Control', value: 'public, s-maxage=3600, stale-while-revalidate=86400' },
+        ],
+      },
+      {
+        source: '/((?!embed/).*)',
         headers: [
           { key: 'Content-Security-Policy', value: "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:;" },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
