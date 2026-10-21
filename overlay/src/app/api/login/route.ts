@@ -7,13 +7,18 @@ export const dynamic = 'force-dynamic';
 const fails = new Map<string, { n: number; reset: number }>();
 const MAX_FAILS = 5;
 const WINDOW = 60_000;
+// Backstop for when the client IP cannot be told apart behind the proxy:
+// at most 20 wrong passwords per minute across all clients.
+let globalFails = { n: 0, reset: 0 };
+const GLOBAL_MAX = 20;
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req);
+  const ip = req.headers.get('x-real-ip') || getClientIp(req);
   const now = Date.now();
   const f = fails.get(ip);
-  if (f && now < f.reset && f.n >= MAX_FAILS) {
-    return NextResponse.json({ error: 'Too many attempts. Try again in a minute.' }, { status: 429, headers: { 'Retry-After': String(Math.ceil((f.reset - now) / 1000)) } });
+  if (now > globalFails.reset) globalFails = { n: 0, reset: now + WINDOW };
+  if ((f && now < f.reset && f.n >= MAX_FAILS) || globalFails.n >= GLOBAL_MAX) {
+    return NextResponse.json({ error: 'Too many attempts. Try again in a minute.' }, { status: 429, headers: { 'Retry-After': String(Math.ceil(((f?.reset ?? globalFails.reset) - now) / 1000)) } });
   }
   let password = '';
   let next = '/';
@@ -38,6 +43,7 @@ export async function POST(req: NextRequest) {
   if (!(await checkPassword(password))) {
     const cur = f && now < f.reset ? f : { n: 0, reset: now + WINDOW };
     cur.n++;
+    globalFails.n++;
     fails.set(ip, cur);
     if (fails.size > 5000) fails.clear();
     return NextResponse.json({ error: 'Wrong password.' }, { status: 401 });

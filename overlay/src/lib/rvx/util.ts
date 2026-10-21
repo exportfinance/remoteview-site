@@ -60,9 +60,15 @@ export function pt(lng: number, lat: number, properties: Record<string, unknown>
   return { type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] }, properties };
 }
 
+/* Env values that are placeholders (e.g. a redacted paste) count as unset. */
+export function envKey(name: string): string | null {
+  const v = (process.env[name] || '').trim();
+  return v && v !== '[REDACTED]' && v.length >= 12 ? v : null;
+}
+
 export function aiConfigured(): string | null {
-  if (process.env.XAI_API_KEY) return 'xai';
-  if (process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_1) return 'gemini';
+  if (envKey('XAI_API_KEY')) return 'xai';
+  if (envKey('GEMINI_API_KEY') || envKey('GEMINI_API_KEY_1')) return 'gemini';
   return null;
 }
 
@@ -74,7 +80,7 @@ export async function ai(system: string, prompt: string, opts: { json?: boolean;
   const hit = aiCache.get(ck);
   if (hit && Date.now() - hit.t < 5 * 60_000) return hit.v;
   let out: string | null = null;
-  const xkey = process.env.XAI_API_KEY;
+  const xkey = envKey('XAI_API_KEY');
   if (xkey) {
     try {
       const r = await fetch('https://api.x.ai/v1/chat/completions', {
@@ -94,7 +100,7 @@ export async function ai(system: string, prompt: string, opts: { json?: boolean;
       else console.warn('[rvx] xai HTTP', r.status);
     } catch (e) { console.warn('[rvx] xai error', (e as Error).message); }
   }
-  const gkey = process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_1;
+  const gkey = envKey('GEMINI_API_KEY') || envKey('GEMINI_API_KEY_1');
   if (!out && gkey) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(gkey)}`, {

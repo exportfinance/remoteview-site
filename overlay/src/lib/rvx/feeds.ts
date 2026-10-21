@@ -1,7 +1,7 @@
 /* RemoteView extras: data handlers for /api/rvx/<feed>. Free, keyless public sources
    unless noted. Each returns JSON (usually GeoJSON) plus a `meta` provenance block. */
 import * as sat from 'satellite.js';
-import { cached, getJson, getText, fc, pt, selfJson, ai, aiConfigured } from './util';
+import { cached, getJson, getText, fc, pt, selfJson, ai, aiConfigured, envKey } from './util';
 import { S, ensureLightning, ensureAis, ensureHistory } from './live';
 
 type Q = URLSearchParams;
@@ -254,7 +254,7 @@ async function history(q: Q) {
 
 /* ── 17 Webcams (Windy, key needed) ───────────────────────── */
 async function webcams(q: Q) {
-  const key = process.env.WINDY_WEBCAMS_KEY;
+  const key = envKey('WINDY_WEBCAMS_KEY');
   if (!key) return { webcams: [], meta: meta('Windy Webcams API', { needsKey: 'WINDY_WEBCAMS_KEY (free tier at api.windy.com/keys)' }) };
   const lat = clampLat(num(q.get('lat'), 0)), lng = num(q.get('lng'), 0);
   const d = await getJson(`https://api.windy.com/webcams/api/v3/webcams?nearby=${lat},${lng},50&limit=20&include=images,location,player`, { headers: { 'x-windy-api-key': key } });
@@ -382,7 +382,7 @@ async function anomalies() {
 
 /* ── 27 Dark ships (GFW SAR — token needed) ───────────────── */
 async function darkships() {
-  const tok = process.env.GFW_API_TOKEN;
+  const tok = envKey('GFW_API_TOKEN');
   if (!tok) return { ...fc([]), meta: meta('Global Fishing Watch SAR vessel detections', { needsKey: 'GFW_API_TOKEN (free for non-commercial use at globalfishingwatch.org/our-apis)' }) };
   return cached('gfw', 6 * 3600_000, async () => {
     const end = new Date(Date.now() - 3 * 86400_000).toISOString().slice(0, 10), start = new Date(Date.now() - 10 * 86400_000).toISOString().slice(0, 10);
@@ -527,6 +527,6 @@ export const HANDLERS: Record<string, (q: Q, body?: any) => Promise<any>> = {
   webcams: (q) => webcams(q), shake: () => shake(), passes: (q) => passes(q), cables: (q) => cables(q), nuclear: () => nuclear(),
   safecast: (q) => safecast(q), anomalies: () => anomalies(), darkships: () => darkships(), change: (q) => change(q),
   story: (q) => story(q), correlate: () => correlate(), briefing: () => briefing(), ask: (q, b) => ask(q, b), chat: (_q, b) => chat(b),
-  status: async () => ({ ai: aiConfigured(), ais: !!process.env.AISSTREAM_API_KEY, windy: !!process.env.WINDY_WEBCAMS_KEY, gfw: !!process.env.GFW_API_TOKEN, lightning: S.lightningUp, history: S.history.length }),
+  status: async () => ({ ai: aiConfigured(), ais: !!envKey('AISSTREAM_API_KEY'), windy: !!envKey('WINDY_WEBCAMS_KEY'), gfw: !!envKey('GFW_API_TOKEN'), lightning: S.lightningUp, history: S.history.length }),
 };
 export const AI_FEEDS = new Set(['ask', 'chat', 'story', 'briefing']);

@@ -3,7 +3,7 @@
 import WebSocket from 'ws';
 import fs from 'node:fs';
 import path from 'node:path';
-import { selfJson } from './util';
+import { selfJson, envKey } from './util';
 
 type Strike = [number, number, number]; // lng, lat, t(ms)
 const g = globalThis as any;
@@ -44,8 +44,8 @@ export function ensureLightning() {
 /* AIS (aisstream.io) — only when AISSTREAM_API_KEY is configured. */
 let aisWs: WebSocket | null = null;
 export function ensureAis(): boolean {
-  const key = process.env.AISSTREAM_API_KEY;
-  if (!key) { S.aisErr = 'AISSTREAM_API_KEY not set'; return false; }
+  const key = envKey('AISSTREAM_API_KEY');
+  if (!key) { S.aisErr = 'AISSTREAM_API_KEY not set (or placeholder)'; return false; }
   if (aisWs) return true;
   const ws = new WebSocket('wss://stream.aisstream.io/v0/stream');
   aisWs = ws;
