@@ -5,7 +5,8 @@ import { TOPICS, topicBySlug, snapshot, dots, dotPath } from '@/lib/seo/live';
 import { worldPath } from '@/lib/seo/data';
 import { PUBLIC_URL } from '@/lib/publicUrl';
 
-export const dynamic = 'force-dynamic';
+/* Incremental static regeneration: the live figures are rebuilt at most every 5 minutes, so visitors get a cached page. */
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ topic: string }> }): Promise<Metadata> {
   const { topic } = await params; const t = topicBySlug(topic); if (!t) return {};
