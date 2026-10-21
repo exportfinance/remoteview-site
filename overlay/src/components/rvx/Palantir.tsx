@@ -28,72 +28,37 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 /* Blueprint Design System dark tokens — CSS only (no @blueprintjs package = no bundle bloat). */
-export function BlueprintStyles() {
-  useEffect(() => {
-    const id = 'rv-blueprint-tokens';
-    if (document.getElementById(id)) return;
-    const s = document.createElement('style');
-    s.id = id;
-    s.textContent = `
-      .rv-bp, .rv-bp * { box-sizing: border-box; }
-      .rv-bp {
-        --bp-dark-gray1: #182026; --bp-dark-gray2: #202B33; --bp-dark-gray3: #293742;
-        --bp-dark-gray4: #30404D; --bp-dark-gray5: #394B59;
-        --bp-blue3: #2B95D6; --bp-blue4: #48AFF0; --bp-blue5: #99C4FF;
-        --bp-font: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
-        font-family: var(--bp-font);
-        color: #F5F8FA;
-      }
-      .rv-bp .bp4-card, .rv-bp-card {
-        background: var(--bp-dark-gray2);
-        border: 1px solid var(--bp-dark-gray4);
-        border-radius: 3px;
-        box-shadow: 0 0 0 1px rgba(16,22,26,0.4), 0 1px 1px rgba(16,22,26,0.4);
-      }
-      .rv-bp .bp4-button, .rv-bp-btn {
-        background: var(--bp-dark-gray3);
-        color: #F5F8FA;
-        border: 1px solid var(--bp-dark-gray5);
-        border-radius: 3px;
-        padding: 5px 10px;
-        font-size: 12px;
-        cursor: pointer;
-      }
-      .rv-bp .bp4-button:hover, .rv-bp-btn:hover { background: var(--bp-dark-gray4); }
-      .rv-bp .bp4-button.bp4-intent-primary, .rv-bp-btn-primary {
-        background: var(--bp-blue3);
-        border-color: var(--bp-blue3);
-        color: #fff;
-      }
-      .rv-bp .bp4-input, .rv-bp-input {
-        background: var(--bp-dark-gray1);
-        color: #F5F8FA;
-        border: 1px solid var(--bp-dark-gray4);
-        border-radius: 3px;
-        padding: 6px 8px;
-        width: 100%;
-      }
-      .rv-bp .bp4-tag {
-        display: inline-block;
-        background: var(--bp-dark-gray4);
-        color: var(--bp-blue5);
-        border-radius: 2px;
-        padding: 1px 6px;
-        font-size: 10px;
-        margin-right: 4px;
-      }
-      .rv-bp .rv-brand {
-        color: ${TEAL};
-        font-weight: 600;
-        letter-spacing: 0.04em;
-      }
-    `;
-    document.head.appendChild(s);
-  }, []);
-  return null;
-}
+export function BlueprintStyles() { return null; }
 
-const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
+const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
+  ssr: false,
+  loading: () => <div className="rvx-skeleton" style={{ height: 260 }} />,
+});
+
+function GraphCanvas({ graph, linkColor }: { graph: any; linkColor: string }) {
+  // Mount only when we have nodes — keeps panel open snappy
+  if (!graph?.nodes?.length) return <div className="rvx-skeleton" style={{ height: 200 }} />;
+  return (
+    <div className="rvx-graph-wrap" style={{ height: 260, background: '#0b1a2e' }}>
+      <ForceGraph2D
+        graphData={graph}
+        nodeLabel="name"
+        linkLabel="name"
+        nodeAutoColorBy="group"
+        width={Math.min(320, (typeof window !== 'undefined' ? window.innerWidth - 48 : 320))}
+        height={260}
+        backgroundColor="#0b1a2e"
+        linkColor={() => linkColor}
+        nodeRelSize={5}
+        cooldownTicks={80}
+        onEngineStop={() => { /* settle */ }}
+        enableNodeDrag={true}
+        enableZoomInteraction={true}
+        enablePanInteraction={true}
+      />
+    </div>
+  );
+}
 
 export function LinkGraphPanel() {
   const [q, setQ] = useState('gazprom');
@@ -131,21 +96,7 @@ export function LinkGraphPanel() {
         <button className="rv-bp-btn-primary" style={btn} onClick={run} disabled={busy}>{busy ? '…' : 'Graph'}</button>
       </div>
       {err && <div style={{ color: '#f87171', fontSize: 11 }}>{err}</div>}
-      {data && (
-        <div style={{ height: 280, background: '#0b1a2e', borderRadius: 4, border: BORDER }}>
-          <ForceGraph2D
-            graphData={graph}
-            nodeLabel="name"
-            linkLabel="name"
-            nodeAutoColorBy="group"
-            width={320}
-            height={280}
-            backgroundColor="#0b1a2e"
-            linkColor={() => 'rgba(45,212,191,0.45)'}
-            nodeRelSize={5}
-          />
-        </div>
-      )}
+      {data && <GraphCanvas graph={graph} linkColor="rgba(45,212,191,0.45)" />}
       <div style={{ color: '#4b6a88', fontSize: 10, marginTop: 4 }}>{data?.meta?.source} · {data?.nodes?.length || 0} nodes</div>
     </Section>
   );
@@ -176,11 +127,7 @@ export function OsGraphPanel() {
       </div>
       {data?.error && <div style={{ color: '#f87171', fontSize: 11 }}>{data.error}</div>}
       {data?.meta?.note && <div style={{ color: '#fbbf24', fontSize: 10, marginBottom: 4 }}>{data.meta.note}</div>}
-      {data?.nodes && (
-        <div style={{ height: 260, background: '#0b1a2e', borderRadius: 4 }}>
-          <ForceGraph2D graphData={graph} nodeLabel="name" linkLabel="name" nodeAutoColorBy="group" width={320} height={260} backgroundColor="#0b1a2e" linkColor={() => 'rgba(248,113,113,0.5)'} />
-        </div>
-      )}
+      {data?.nodes && <GraphCanvas graph={graph} linkColor="rgba(248,113,113,0.5)" />}
       {data?.search?.results?.length > 0 && (
         <div style={{ fontSize: 10, marginTop: 4, maxHeight: 80, overflow: 'auto' }}>
           Matches: {data.search.results.slice(0, 5).map((r: any) => (
@@ -460,7 +407,7 @@ export function CaseFilesPanel() {
       // Client-side fallback: print window
       const w = window.open('', '_blank');
       if (!w) return;
-      w.document.write(`<pre>${(current.notes || '').replace(/</g, '&lt;')}\n\nEntities:\n${current.entities.map((e) => `[${e.type}] ${e.label || e.id}`).join('\n')}</pre>`);
+      w.document.write(`<pre>${(current.notes || '').replace(/</g, '<')}\n\nEntities:\n${current.entities.map((e) => `[${e.type}] ${e.label || e.id}`).join('\n')}</pre>`);
       w.document.close(); w.print();
     }
   };
@@ -575,21 +522,60 @@ export function AlephPanel() {
   );
 }
 
+function SoftDetails({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rv-bp-card" style={{ marginBottom: 10, padding: 0, overflow: 'hidden' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{ ...btn, width: '100%', textAlign: 'left', border: 'none', borderRadius: 0, padding: '10px 12px', background: 'transparent', color: TEAL, letterSpacing: 1, fontSize: 11 }}
+      >
+        {open ? '▾' : '▸'} {title}
+      </button>
+      <div style={{
+        display: 'grid',
+        gridTemplateRows: open ? '1fr' : '0fr',
+        transition: 'grid-template-rows 240ms cubic-bezier(0.22, 1, 0.36, 1)',
+      }}>
+        <div style={{ overflow: 'hidden' }}>
+          <div style={{ padding: open ? '0 10px 10px' : '0 10px', opacity: open ? 1 : 0, transition: 'opacity 180ms ease' }}>
+            {open ? children : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PalantirTab() {
   return (
     <div className="rv-bp">
-      <BlueprintStyles />
       <div className="rv-brand" style={{ marginBottom: 8, fontSize: 12 }}>REMOTEVIEW · INVESTIGATIONS</div>
       <p style={{ fontSize: 10, color: '#7f97b2', marginTop: 0 }}>
-        Blueprint dark styling (design tokens only — full @blueprintjs package not bundled). Public/legal data only.
+        Smooth Intel pack — heavy graphs and deck.gl load only when you open a section. Public/legal data only.
       </p>
-      <LinkGraphPanel />
-      <OsGraphPanel />
-      <TimelineScrubber />
-      <Analytics3D />
-      <CaseFilesPanel />
-      <ThreatIntelPanel />
-      <AlephPanel />
+      <SoftDetails title="LINK GRAPH">{/* mount on open */}
+        <LinkGraphPanel />
+      </SoftDetails>
+      <SoftDetails title="OPENSANCTIONS GRAPH">
+        <OsGraphPanel />
+      </SoftDetails>
+      <SoftDetails title="TIMELINE SCRUBBER" defaultOpen>
+        <TimelineScrubber />
+      </SoftDetails>
+      <SoftDetails title="ANALYTICS 3D (deck.gl)">
+        <Analytics3D />
+      </SoftDetails>
+      <SoftDetails title="CASE FILES">
+        <CaseFilesPanel />
+      </SoftDetails>
+      <SoftDetails title="THREAT INTEL">
+        <ThreatIntelPanel />
+      </SoftDetails>
+      <SoftDetails title="ALEPH (OCCRP)">
+        <AlephPanel />
+      </SoftDetails>
     </div>
   );
 }

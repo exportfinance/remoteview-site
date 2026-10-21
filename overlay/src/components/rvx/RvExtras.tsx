@@ -2,7 +2,8 @@
 /* RemoteView extras: extra map layers + panels (briefing, alerts, timeline, ask, tools,
    watchlists, replay, situation rooms). Attaches to the main MapLibre map via window.__rvMap. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PalantirTab, BlueprintStyles } from './Palantir';
+import dynamic from 'next/dynamic';
+const PalantirTab = dynamic(() => import('./Palantir').then((m) => m.PalantirTab), { ssr: false, loading: () => <div className="rvx-skeleton" style={{ minHeight: 80 }} /> });
 
 const TEAL = '#2DD4BF';
 const NAVY = 'rgba(6,16,30,0.94)';
@@ -117,6 +118,8 @@ const input: React.CSSProperties = { background: '#0b1a2e', color: '#e6f1ff', bo
 
 export default function RvExtras() {
   const [open, setOpen] = useState(false);
+  const [panelMounted, setPanelMounted] = useState(false);
+  useEffect(() => { if (open) setPanelMounted(true); }, [open]);
   const [tab, setTab] = useState<'layers' | 'brief' | 'alerts' | 'timeline' | 'ask' | 'tools' | 'watch' | 'replay' | 'intel'>('layers');
   const [on, setOn] = useState<Record<string, boolean>>({});
   const [meta, setMeta] = useState<Record<string, { source?: string; fetched?: string; count?: number; err?: string; needsKey?: string }>>({});
@@ -137,6 +140,12 @@ export default function RvExtras() {
 
   useEffect(() => { const f = (e: any) => setPickingG(!!e.detail); window.addEventListener('rvx-pick', f); return () => window.removeEventListener('rvx-pick', f); }, []);
   useEffect(() => { const f = () => setIsMobile(window.innerWidth < 768); f(); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
+  useEffect(() => {
+    if (!open) return;
+    const m = getMap();
+    const id = window.setTimeout(() => { try { m?.resize?.(); m?.triggerRepaint?.(); } catch { /* */ } }, 280);
+    return () => clearTimeout(id);
+  }, [open, isMobile]);
   useEffect(() => {
     if (!follow) return;
     let dead = false;
@@ -300,7 +309,7 @@ export default function RvExtras() {
         const lid = f.layer.id.replace(/^rvx-/, '').replace(/-(pt|fl|ln)$/, '');
         const md = meta[lid];
         const rows = Object.entries(f.properties || {}).filter(([, v]) => v !== null && v !== '' && typeof v !== 'object').slice(0, 10)
-          .map(([k, v]) => `<div><span style="color:#7f97b2">${k}</span> ${String(v).startsWith('http') ? `<a href="${v}" target="_blank" rel="noopener" style="color:${TEAL}">link</a>` : String(v).replace(/</g, '&lt;')}</div>`).join('');
+          .map(([k, v]) => `<div><span style="color:#7f97b2">${k}</span> ${String(v).startsWith('http') ? `<a href="${v}" target="_blank" rel="noopener" style="color:${TEAL}">link</a>` : String(v).replace(/</g, '<')}</div>`).join('');
         const ml = (window as any).maplibregl;
         const html = `<div style="font:11px ui-monospace,monospace;color:#e6f1ff;max-width:260px">${rows}<div style="margin-top:6px;color:#7f97b2;border-top:1px solid #1e3a5f;padding-top:4px">source: ${md?.source || lid} · ${ago(md?.fetched)} · <span style="color:${CONF_COLOR[CONFIDENCE[lid] || 'medium']}">${CONFIDENCE[lid] || 'medium'} confidence</span></div></div>`;
         if (ml?.Popup) new ml.Popup({ className: 'rvx-popup', maxWidth: '280px' }).setLngLat(e.lngLat).setHTML(html).addTo(m);
@@ -310,7 +319,7 @@ export default function RvExtras() {
     return () => clearInterval(t);
   }, [meta]);
 
-  const flyTo = (lng: number, lat: number, zoom = 6) => getMap()?.flyTo({ center: [lng, lat], zoom, essential: true });
+  const flyTo = (lng: number, lat: number, zoom = 6) => getMap()?.flyTo({ center: [lng, lat], zoom, essential: true, duration: 900, curve: 1.35, speed: 1.1 });
   const toggle = (id: string, v?: boolean) => setOn((s) => ({ ...s, [id]: v ?? !s[id] }));
   const notify = (text: string) => { setToast(text); setTimeout(() => setToast(''), 6000); if (soundOnRef.current) beep(); };
 
@@ -319,17 +328,22 @@ export default function RvExtras() {
   const groups = [...new Set(LAYERS.map((l) => l.group))];
   return (
     <>
-      <button aria-label="Open RemoteView extras" onClick={() => setOpen((o) => !o)}
+      <button aria-label="Open RemoteView extras" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+        className={`rvx-fab${open ? ' is-open' : ''}`}
         style={{ position: 'fixed', zIndex: 60, right: isMobile ? 10 : 16, bottom: isMobile ? 84 : 64, background: NAVY, color: TEAL, border: BORDER, borderRadius: 8, padding: '8px 12px', fontSize: 11, letterSpacing: 2, fontWeight: 700, fontFamily: 'ui-monospace,monospace', boxShadow: '0 0 18px rgba(45,212,191,0.15)', cursor: 'pointer' }}>
         {open ? '✕ CLOSE' : '◎ EXTRAS'}
       </button>
       {picking && <div role="status" style={{ position: 'fixed', zIndex: 70, left: '50%', transform: 'translateX(-50%)', top: 70, background: NAVY, color: TEAL, border: BORDER, borderRadius: 6, padding: '8px 12px', fontSize: 12, fontFamily: 'ui-monospace,monospace' }}>Tap the map to choose a point</div>}
-      {toast && <div role="status" style={{ position: 'fixed', zIndex: 70, left: '50%', transform: 'translateX(-50%)', top: 70, background: NAVY, color: '#e6f1ff', border: BORDER, borderRadius: 6, padding: '8px 12px', fontSize: 12, fontFamily: 'ui-monospace,monospace', maxWidth: '90vw' }}>{toast}</div>}
-      {open && (
-        <div data-testid="rvx-panel" className="rv-bp" style={{ display: picking ? 'none' : undefined, position: 'fixed', zIndex: 59, right: isMobile ? 0 : 16, left: isMobile ? 0 : 'auto', bottom: isMobile ? 128 : 108, width: isMobile ? '100%' : 360, maxHeight: isMobile ? '55vh' : '70vh', overflow: 'auto', background: NAVY, border: BORDER, borderRadius: isMobile ? '10px 10px 0 0' : 10, color: '#cfe3f5', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: 12, backdropFilter: 'blur(8px)' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 8, borderBottom: BORDER, position: 'sticky', top: 0, background: NAVY }}>
+      {toast && <div role="status" className="rvx-toast" style={{ position: 'fixed', zIndex: 70, left: '50%', transform: 'translateX(-50%)', top: 70, background: NAVY, color: '#e6f1ff', border: BORDER, borderRadius: 6, padding: '8px 12px', fontSize: 12, fontFamily: 'ui-monospace,monospace', maxWidth: '90vw' }}>{toast}</div>}
+      {panelMounted && (
+        <div
+          className={`rvx-panel-shell${open ? ' is-open' : ''}${picking ? ' is-picking' : ''}`}
+          style={{ right: isMobile ? 0 : 16, left: isMobile ? 0 : 'auto', bottom: isMobile ? 128 : 108, width: isMobile ? '100%' : 380 }}
+        >
+        <div data-testid="rvx-panel" className="rv-bp rvx-panel" style={{ maxHeight: isMobile ? '55vh' : '72vh', overflow: 'auto', background: NAVY, border: BORDER, borderRadius: isMobile ? '10px 10px 0 0' : 12, color: '#cfe3f5', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: 12 }}>
+          <div className="rvx-tabs">
             {(['layers', 'brief', 'alerts', 'timeline', 'ask', 'tools', 'watch', 'replay', 'intel'] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)} style={{ ...btn, background: tab === t ? 'rgba(45,212,191,0.18)' : 'transparent', textTransform: 'uppercase', letterSpacing: 1, fontSize: 10 }}>{t}</button>
+              <button key={t} className={`rvx-tab${tab === t ? ' is-active' : ''}`} onClick={() => setTab(t)} style={{ ...btn, background: tab === t ? 'rgba(45,212,191,0.18)' : 'transparent', textTransform: 'uppercase', letterSpacing: 1, fontSize: 10 }}>{t}</button>
             ))}
           </div>
           <div style={{ padding: 10 }}>
@@ -427,9 +441,9 @@ export default function RvExtras() {
             {tab === 'intel' && <PalantirTab />}
           </div>
         </div>
+        </div>
       )}
       <WatchRunner notify={notify} />
-      <BlueprintStyles />
       <PwaRegister />
     </>
   );

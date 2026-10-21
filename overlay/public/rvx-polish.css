@@ -1,0 +1,164 @@
+/* RemoteView extras — smooth 60fps polish (GPU-friendly, no layout thrash) */
+.rvx-fab {
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease, background 180ms ease, opacity 150ms ease;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.rvx-fab:hover { transform: translateY(-1px); box-shadow: 0 0 22px rgba(45,212,191,0.28); }
+.rvx-fab:active { transform: translateY(0) scale(0.98); }
+.rvx-fab.is-open { background: rgba(12, 28, 48, 0.96); }
+
+.rvx-panel-shell {
+  position: fixed;
+  z-index: 59;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 12px, 0) scale(0.985);
+  transition:
+    opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+  contain: layout style;
+}
+.rvx-panel-shell.is-open {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+.rvx-panel-shell.is-picking { opacity: 0 !important; pointer-events: none !important; }
+
+.rvx-panel {
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  box-shadow:
+    0 0 0 1px rgba(45,212,191,0.18),
+    0 18px 48px rgba(0,0,0,0.45),
+    0 0 40px rgba(45,212,191,0.08);
+  /* Isolate paint so scrolling the panel doesn't dirty the map canvas */
+  contain: content;
+  content-visibility: auto;
+}
+
+.rvx-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid rgba(45,212,191,0.28);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(6,16,30,0.92);
+  backdrop-filter: blur(10px);
+}
+.rvx-tab {
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease, transform 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.rvx-tab:hover { background: rgba(45,212,191,0.1); }
+.rvx-tab:active { transform: scale(0.97); }
+.rvx-tab.is-active {
+  background: rgba(45,212,191,0.2);
+  box-shadow: inset 0 -2px 0 #2DD4BF;
+}
+
+.rvx-toast {
+  animation: rvx-toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes rvx-toast-in {
+  from { opacity: 0; transform: translate3d(-50%, -8px, 0); }
+  to { opacity: 1; transform: translate3d(-50%, 0, 0); }
+}
+
+.rvx-skeleton {
+  background: linear-gradient(90deg, rgba(45,212,191,0.06) 25%, rgba(45,212,191,0.14) 37%, rgba(45,212,191,0.06) 63%);
+  background-size: 400% 100%;
+  animation: rvx-shimmer 1.2s ease infinite;
+  border-radius: 6px;
+  min-height: 120px;
+}
+@keyframes rvx-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+.rv-bp-card {
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.rv-bp-card:hover {
+  border-color: rgba(72,175,240,0.35);
+  box-shadow: 0 0 0 1px rgba(72,175,240,0.15), 0 8px 24px rgba(0,0,0,0.25);
+}
+
+.rvx-graph-wrap {
+  border-radius: 6px;
+  overflow: hidden;
+  /* Force graph canvas compositing layer */
+  transform: translateZ(0);
+  contain: strict;
+}
+
+/* Prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .rvx-fab, .rvx-panel-shell, .rvx-tab, .rvx-toast, .rv-bp-card, .rvx-skeleton {
+    transition: none !important;
+    animation: none !important;
+  }
+  .rvx-panel-shell { transform: none; }
+}
+
+/* Mobile: slide up from bottom, fuller sheet feel */
+@media (max-width: 640px) {
+  .rvx-panel-shell {
+    transform: translate3d(0, 24px, 0);
+  }
+  .rvx-panel-shell.is-open {
+    transform: translate3d(0, 0, 0);
+  }
+  .rvx-panel {
+    border-radius: 14px 14px 0 0 !important;
+    max-height: 58vh !important;
+  }
+}
+
+
+/* Blueprint Design System dark tokens (CSS-only — no @blueprintjs package) */
+.rv-bp, .rv-bp * { box-sizing: border-box; }
+.rv-bp {
+  --bp-dark-gray1: #182026; --bp-dark-gray2: #202B33; --bp-dark-gray3: #293742;
+  --bp-dark-gray4: #30404D; --bp-dark-gray5: #394B59;
+  --bp-blue3: #2B95D6; --bp-blue4: #48AFF0; --bp-blue5: #99C4FF;
+  font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #F5F8FA;
+}
+.rv-bp .bp4-card, .rv-bp-card {
+  background: var(--bp-dark-gray2);
+  border: 1px solid var(--bp-dark-gray4);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(16,22,26,0.4), 0 1px 1px rgba(16,22,26,0.4);
+}
+.rv-bp .bp4-button, .rv-bp-btn {
+  background: var(--bp-dark-gray3); color: #F5F8FA;
+  border: 1px solid var(--bp-dark-gray5); border-radius: 3px;
+  padding: 5px 10px; font-size: 12px; cursor: pointer;
+  transition: background 140ms ease, transform 120ms ease;
+}
+.rv-bp .bp4-button:hover, .rv-bp-btn:hover { background: var(--bp-dark-gray4); }
+.rv-bp .bp4-button:active, .rv-bp-btn:active { transform: scale(0.97); }
+.rv-bp .bp4-button.bp4-intent-primary, .rv-bp-btn-primary {
+  background: var(--bp-blue3); border-color: var(--bp-blue3); color: #fff;
+}
+.rv-bp .bp4-input, .rv-bp-input {
+  background: var(--bp-dark-gray1); color: #F5F8FA;
+  border: 1px solid var(--bp-dark-gray4); border-radius: 3px;
+  padding: 6px 8px; width: 100%;
+}
+.rv-bp .bp4-tag {
+  display: inline-block; background: var(--bp-dark-gray4); color: var(--bp-blue5);
+  border-radius: 2px; padding: 1px 6px; font-size: 10px; margin-right: 4px;
+}
+.rv-bp .rv-brand { color: #2DD4BF; font-weight: 600; letter-spacing: 0.04em; }
