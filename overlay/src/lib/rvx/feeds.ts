@@ -3,6 +3,7 @@
 import * as sat from 'satellite.js';
 import { cached, getJson, getText, fc, pt, selfJson, ai, aiConfigured, envKey } from './util';
 import { S, ensureLightning, ensureAis, ensureHistory } from './live';
+import { dossier, coverLayer, ukefAll, eximAll } from './country';
 
 type Q = URLSearchParams;
 const meta = (source: string, extra: Record<string, unknown> = {}) => ({ source, fetched: new Date().toISOString(), ...extra });
@@ -551,6 +552,9 @@ export const HANDLERS: Record<string, (q: Q, body?: any) => Promise<any>> = {
   webcams: (q) => webcams(q), shake: () => shake(), passes: (q) => passes(q), cables: (q) => cables(q), nuclear: () => nuclear(),
   safecast: (q) => safecast(q), anomalies: () => anomalies(), darkships: () => darkships(), change: (q) => change(q),
   story: (q) => story(q), correlate: () => correlate(), briefing: () => briefing(), ask: (q, b) => ask(q, b), chat: (_q, b) => chat(b),
+  dossier: (q) => dossier(num(q.get('lng'), 0), clampLat(num(q.get('lat'), 0))),
+  'cover-ukef': () => coverLayer('ukef'), 'cover-exim': () => coverLayer('exim'),
+  ukef: () => ukefAll(), exim: async () => { const e = await eximAll(); return { count: e.rows.length, asOf: e.asOf, unreliable: e.unreliable, footnotes: Object.keys(e.footnotes).length, pdf: e.pdf }; },
   aurora: () => aurora(), tfr: () => tfr(), outbreaks: () => outbreaks(),
   status: async () => ({ ai: aiConfigured(), ais: !!envKey('AISSTREAM_API_KEY'), windy: !!envKey('WINDY_WEBCAMS_KEY'), gfw: !!envKey('GFW_API_TOKEN'), lightning: S.lightningUp, history: S.history.length }),
 };

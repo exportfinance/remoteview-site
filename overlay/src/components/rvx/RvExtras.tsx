@@ -36,6 +36,8 @@ export const LAYERS: Layer[] = [
   { id: 'jamming', label: 'GPS jamming (ADS-B)', group: 'Security', kind: 'geojson', url: '/api/rvx/jamming', refreshMs: 120000, style: 'fill', color: '#EF4444' },
   { id: 'protests', label: 'Protests & unrest (GDELT)', group: 'Security', kind: 'geojson', url: '/api/rvx/protests', refreshMs: 600000, style: 'heat', color: '#F43F5E' },
   { id: 'anomalies', label: 'Anomaly pins', group: 'Security', kind: 'geojson', url: '/api/rvx/anomalies', refreshMs: 120000, style: 'circle', color: '#FACC15', radius: 9 },
+  { id: 'cover-ukef', label: 'UKEF cover status', group: 'Export credit', kind: 'geojson', url: '/api/rvx/cover-ukef', style: 'fill', colorExpr: ['match', ['get', 'status'], 'on', '#22C55E', 'partial', '#EAB308', 'off', '#EF4444', 'contact', '#60A5FA', 'rgba(0,0,0,0)'] },
+  { id: 'cover-exim', label: 'US EXIM cover status', group: 'Export credit', kind: 'geojson', url: '/api/rvx/cover-exim', style: 'fill', colorExpr: ['match', ['get', 'status'], 'on', '#22C55E', 'partial', '#EAB308', 'off', '#EF4444', 'rgba(0,0,0,0)'] },
   { id: 'ufo', label: 'UFO reports (unverified, NUFORC)', group: 'Curiosities', kind: 'geojson', url: '/data/ufo/index.json', style: 'cluster', color: '#C084FC' },
   { id: 'ships', label: 'Live ships (AIS)', group: 'Maritime', kind: 'geojson', url: '/api/rvx/ships', refreshMs: 60000, style: 'circle', colorExpr: ['match', ['get', 'kind'], 'tanker', '#F97316', 'lng', '#22D3EE', 'cargo', '#A3E635', 'passenger', '#E879F9', 'military', '#EF4444', '#94A3B8'], radius: 2.5 },
 ];
@@ -44,7 +46,7 @@ export const LAYERS: Layer[] = [
 export const CONFIDENCE: Record<string, 'high' | 'medium' | 'low'> = {
   gibs: 'high', sst: 'high', seaice: 'high', nightlights: 'high', storms: 'high', smoke: 'high', volcanoes: 'high', tsunami: 'high', shake: 'medium',
   aurora: 'high', launches: 'high', iss: 'high', ioda: 'medium', cables: 'high', nuclear: 'medium', power: 'high', lightning: 'medium', jamming: 'medium',
-  protests: 'low', anomalies: 'low', ships: 'medium', ufo: 'low',
+  protests: 'low', anomalies: 'low', ships: 'medium', ufo: 'low', 'cover-ukef': 'high', 'cover-exim': 'high',
 };
 const CONF_COLOR = { high: '#22C55E', medium: '#EAB308', low: '#F97316' };
 
@@ -309,6 +311,11 @@ export default function RvExtras() {
                             )}
                             {on[l.id] && l.kind === 'raster' && <span style={{ display: 'block', color: '#7f97b2', fontSize: 10 }}>NASA GIBS{l.id === 'gibs' ? ` · ${gibsDate}` : l.id === 'nightlights' ? ' · Black Marble 2016' : ` · ${gibsDate}`}</span>}
                           </span>
+                          {(l.id === 'cover-ukef' || l.id === 'cover-exim') && on[l.id] && (
+                            <span style={{ fontSize: 10, display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ color: '#22C55E' }}>■ open</span><span style={{ color: '#EAB308' }}>■ partial</span><span style={{ color: '#EF4444' }}>■ off cover</span>{l.id === 'cover-ukef' && <span style={{ color: '#60A5FA' }}>■ contact UKEF</span>}
+                            </span>
+                          )}
                           {l.id === 'ufo' && on.ufo && (
                             <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }} onClick={(e) => e.preventDefault()}>
                               <input aria-label="UFO from" type="date" value={ufoFrom} min="1925-01-01" max="2023-12-31" onChange={(e) => setUfoFrom(e.target.value)} style={{ ...input, width: 128, padding: '2px 4px' }} />
@@ -481,8 +488,13 @@ function Tools() {
   const [passes, setPasses] = useState<any>(null); const [cams, setCams] = useState<any>(null); const [rad, setRad] = useState<any>(null);
   const [chg, setChg] = useState<any>(null); const [story, setStory] = useState<any>(null); const [sid, setSid] = useState(''); const [busy, setBusy] = useState('');
   const run = async (k: string, f: () => Promise<void>) => { setBusy(k); try { await f(); } catch (e) { alert((e as Error).message); } setBusy(''); };
+  const [dos, setDos] = useState<any>(null);
   return (
     <div>
+      <Section title="COUNTRY DOSSIER (Factbook + export credit cover)">
+        <button style={btn} onClick={() => run('dos', async () => { const p = await pick(); setDos(await getJ(`/api/rvx/dossier?lat=${p.lat}&lng=${p.lng}`)); })}>{picking ? 'Click a country…' : busy === 'dos' ? 'Loading…' : 'Pick a country'}</button>
+        {dos && <Dossier d={dos} />}
+      </Section>
       <Section title="SATELLITE FLYOVERS">
         <button style={btn} onClick={() => run('passes', async () => { const p = await pick(); setPasses(await getJ(`/api/rvx/passes?lat=${p.lat}&lng=${p.lng}`)); })}>{picking ? 'Click the map…' : busy === 'passes' ? 'Computing…' : 'Pick a spot'}</button>
         {passes && <div style={{ marginTop: 6, fontSize: 11 }}>{passes.passes.slice(0, 12).map((p: any, i: number) => <div key={i}>{new Date(p.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} <span style={{ color: TEAL }}>{p.name}</span> max {p.max_el}°</div>)}<div style={{ color: '#4b6a88', fontSize: 10 }}>{passes.meta.source}</div></div>}
@@ -506,6 +518,41 @@ function Tools() {
           <button style={btn} onClick={() => run('story', async () => { const q = /^\d{9}$/.test(sid.trim()) ? `mmsi=${sid.trim()}` : `hex=${sid.trim()}`; setStory(await getJ(`/api/rvx/story?${q}`)); })}>{busy === 'story' ? '…' : 'Tell'}</button></div>
         {story && <div style={{ marginTop: 6, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{story.summary}<div style={{ color: '#4b6a88', fontSize: 10 }}>{story.meta?.source}</div></div>}
       </Section>
+    </div>
+  );
+}
+function KV({ o }: { o: Record<string, string> }) {
+  return <>{Object.entries(o || {}).map(([k, v]) => <div key={k} style={{ fontSize: 11, marginBottom: 3 }}><span style={{ color: '#7f97b2' }}>{k}:</span> {v}</div>)}</>;
+}
+const yn = (b: boolean) => <span style={{ color: b ? '#22C55E' : '#EF4444' }}>{b ? 'yes' : 'no'}</span>;
+function Dossier({ d }: { d: any }) {
+  if (!d.country) return <div style={{ marginTop: 6 }}>No country at that point (sea or unlisted territory).</div>;
+  const fb = d.factbook; const uk = d.ukef; const ex = d.exim;
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        {fb?.flag && <img src={fb.flag} alt="" style={{ height: 22, border: '1px solid #1e3a5f' }} />}
+        <span style={{ color: '#e6f1ff', fontSize: 14 }}>{d.country.name}</span>
+      </div>
+      <div style={{ color: TEAL, fontSize: 11, margin: '8px 0 4px' }}>EXPORT CREDIT COVER</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div style={{ border: BORDER, borderRadius: 6, padding: 6 }}>
+          <div style={{ color: '#e6f1ff' }}>UKEF</div>
+          {uk?.row ? <><div style={{ fontSize: 11 }}>Market risk appetite: {uk.row.appetite}</div><div style={{ fontSize: 11 }}>Short term: {uk.row.short}</div><div style={{ fontSize: 11 }}>Medium/long term: {uk.row.mlt}</div>{uk.row.notes.map((n: string, i: number) => <div key={i} style={{ fontSize: 10, color: '#9fb3c8', marginTop: 3 }}>{n}</div>)}</> : <div style={{ fontSize: 11 }}>{uk?.error || 'Not listed by UKEF'}</div>}
+          <div style={{ fontSize: 10, color: '#4b6a88', marginTop: 4 }}>Updated {uk?.updated?.slice(0, 10)} · <a href={uk?.url} target="_blank" rel="noopener" style={{ color: TEAL }}>gov.uk</a> · OGL</div>
+        </div>
+        <div style={{ border: BORDER, borderRadius: 6, padding: 6 }}>
+          <div style={{ color: '#e6f1ff' }}>US EXIM</div>
+          {ex?.row ? <><div style={{ fontSize: 11 }}>Public: ≤1y {yn(ex.row.public.st)} · 1-7y {yn(ex.row.public.mt)} · 7y+ {yn(ex.row.public.lt)}</div><div style={{ fontSize: 11 }}>Private: ≤1y {yn(ex.row.private.st)} · 1-7y {yn(ex.row.private.mt)} · 7y+ {yn(ex.row.private.lt)}</div>{Object.entries(ex.footnotes || {}).map(([k, v]: any) => <div key={k} style={{ fontSize: 10, color: '#9fb3c8', marginTop: 3 }}>Note {k}: {v}</div>)}</> : <div style={{ fontSize: 11 }}>{ex?.error || 'Not listed in the CLS'}</div>}
+          <div style={{ fontSize: 10, color: '#4b6a88', marginTop: 4 }}>CLS as of {ex?.asOf} · <a href={ex?.pdf || ex?.url} target="_blank" rel="noopener" style={{ color: TEAL }}>exim.gov</a></div>
+        </div>
+      </div>
+      <div style={{ color: TEAL, fontSize: 11, margin: '10px 0 4px' }}>CIA WORLD FACTBOOK</div>
+      {fb?.available ? <>
+        <div style={{ fontSize: 10, color: '#fbbf24', marginBottom: 4 }}>Final edition — data as of {fb.asOf?.slice(0, 10)}. The CIA discontinued the Factbook on 4 Feb 2026.</div>
+        {[['Government', fb.government], ['People', fb.people], ['Economy', fb.economy], ['Military', fb.military], ['Energy', fb.energy], ['Transnational issues', fb.transnational]].map(([t, o]: any) => Object.keys(o || {}).length ? <details key={t} style={{ marginBottom: 4 }}><summary style={{ cursor: 'pointer', color: '#e6f1ff' }}>{t}</summary><KV o={o} /></details> : null)}
+        <div style={{ fontSize: 10, color: '#4b6a88' }}><a href={fb.url} target="_blank" rel="noopener" style={{ color: TEAL }}>Source (public domain)</a></div>
+      </> : <div style={{ fontSize: 11 }}>{fb?.reason || 'Unavailable'}</div>}
     </div>
   );
 }

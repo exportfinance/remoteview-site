@@ -20,6 +20,7 @@ RUN npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
+RUN apk add --no-cache poppler-utils
 ENV NODE_ENV=production
 ENV UV_THREADPOOL_SIZE=64
 ENV HOSTNAME="0.0.0.0"
