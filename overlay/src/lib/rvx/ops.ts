@@ -10,13 +10,15 @@ function bbox(q: Q) {
   if ((e - w) * (nn - s) > 40) throw new Error('Zoom in further (area too large for OpenStreetMap query)');
   return [s, w, nn, e].map((x) => x.toFixed(3)).join(',');
 }
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 async function overpass(ql: string) {
+  const q = `[out:json][timeout:25];${ql}`;
   let err: Error | null = null;
   for (const u of OVERPASS) {
     try {
-      return await getJson(u + '?data=' + encodeURIComponent(`[out:json][timeout:25];${ql}`), {
-        timeout: 30000, headers: { 'User-Agent': 'RemoteView/1.0 (+https://remoteview.online)' },
+      return await getJson(u, {
+        method: 'POST', body: 'data=' + encodeURIComponent(q), timeout: 35000,
+        headers: { 'User-Agent': 'RemoteView/1.0 (+https://remoteview.online)', 'Content-Type': 'application/x-www-form-urlencoded' },
       });
     } catch (e) { err = e as Error; }
   }
