@@ -4,9 +4,7 @@ import { TOPICS, topicBySlug, snapshot, dots, dotPath } from '@/lib/seo/live';
 import { worldPath } from '@/lib/seo/data';
 import { EMBED_CSS, Powered } from '@/components/seo/embed';
 import { PUBLIC_URL } from '@/lib/publicUrl';
-export const revalidate = 3600;
-export const dynamicParams = false;
-export function generateStaticParams() { return TOPICS.map((t) => ({ topic: t.slug })); }
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { robots: { index: false, follow: true } };
 export default async function EmbedLive({ params }: { params: Promise<{ topic: string }> }) {
   const { topic } = await params; const t = topicBySlug(topic); if (!t) notFound();
