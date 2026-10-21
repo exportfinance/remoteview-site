@@ -1,21 +1,12 @@
 import type { Metadata } from 'next';
-import WaitlistForm from '@/components/landing/WaitlistForm';
-import { CONSENT_TEXT, signupStats } from '@/lib/waitlist';
 import { billingEnabled, founderCoupon, FOUNDER_LIMIT } from '@/lib/billing/config';
 import { founderUsed } from '@/lib/accounts';
 import { PUBLIC_URL } from '@/lib/publicUrl';
 
 export const dynamic = 'force-dynamic';
 const TITLE = 'RemoteView: the whole world, live, in one screen';
-const DESC = 'Live aircraft, ships, satellites, hazards, weather and country risk on one 3D globe, with AI briefings that summarise what changed. Join the waitlist for early access.';
+const DESC = 'Live aircraft, ships, satellites, hazards, weather and country risk on one 3D globe, with AI briefings that summarise what changed. Start a 7-day free trial.';
 
-const g = globalThis as any;
-async function waitlistCount(): Promise<number | null> {
-  const c = g.__rvWlCount;
-  if (c && Date.now() - c.t < 60_000) return c.n;
-  try { const n = (await signupStats()).total; g.__rvWlCount = { n, t: Date.now() }; return n; }
-  catch { return c?.n ?? null; }
-}
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -40,7 +31,7 @@ const FEATURES = [
 ];
 
 const PLANS = [
-  { name: 'Personal', price: '$34.99', per: '/mo', alt: 'or $349/yr', blurb: 'For enthusiasts and independent researchers.', items: ['Every live layer', 'AI briefings and Q&A (fair use)', 'Saved watchlists and alerts', '1 user'] },
+  { name: 'Personal', price: '$19.99', per: '/mo', alt: 'or $199/yr', blurb: 'For enthusiasts and independent researchers.', items: ['Every live layer', 'AI briefings and Q&A (fair use)', 'Saved watchlists and alerts', '1 user'] },
   { name: 'Pro', price: '$99', per: '/mo', alt: 'or $990/yr', blurb: 'For analysts, journalists and risk professionals.', items: ['Everything in Personal', 'Higher AI limits', 'PDF country reports and case files', 'Priority support'], featured: true },
   { name: 'Teams', price: 'From $299', per: '/mo', alt: 'Quote on request', blurb: 'For newsrooms, security and risk teams.', items: ['Everything in Pro', 'Multiple seats', 'Shared cases and situation rooms', 'Onboarding'] },
 ];
@@ -150,20 +141,19 @@ body:has([data-rv-landing])>a[href="/credits"]{display:none}
 @media(max-width:860px){.rvl-grid{grid-template-columns:1fr}.rvl-shots{grid-template-columns:1fr}.rvl-row{grid-template-columns:1fr}.rvl-navlinks .rvl-hide{display:none}.rvl-sec{padding:64px 0}}
 `;
 
-const reveal = `(()=>{const h=document.querySelector('.rvl-hero h1');if(h&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const T=h.textContent,C='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%/<>',o=document.createElement('div');o.className='rvl-dec';o.setAttribute('aria-hidden','true');h.appendChild(o);h.classList.add('rvl-decoding');o.style.color='#e6f1ff';let f=0;const n=T.length,tick=()=>{f++;const k=Math.floor(f*n/38);let out='';for(let i=0;i<n;i++){const c=T[i];out+=(i<k||c===' '||c===','||c==='.')?c:C[(Math.random()*C.length)|0]}o.textContent=out;if(k<n)requestAnimationFrame(tick);else{o.remove();h.classList.remove('rvl-decoding')}};setTimeout(()=>requestAnimationFrame(tick),250)}})();(()=>{const r=document.querySelector('.rvl');if(!r||!('IntersectionObserver' in window))return;r.classList.add('rvl-js');const io=new IntersectionObserver((es)=>{for(const e of es)if(e.isIntersecting){e.target.classList.add('rvl-in');io.unobserve(e.target)}},{root:r,rootMargin:'0px 0px -8% 0px',threshold:.08});const m=r.querySelector('.rvl-mcta'),w=r.querySelector('#waitlist');if(m)r.addEventListener('scroll',()=>{const wb=w?w.getBoundingClientRect():null;m.classList.toggle('on',r.scrollTop>innerHeight*.7&&!(wb&&wb.top<innerHeight&&wb.bottom>0))},{passive:true});r.querySelectorAll('.rvl-r').forEach(el=>{const b=el.getBoundingClientRect();if(b.top<innerHeight)el.classList.add('rvl-in');io.observe(el)})})();`;
+const reveal = `(()=>{const h=document.querySelector('.rvl-hero h1');if(h&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const T=h.textContent,C='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%/<>',o=document.createElement('div');o.className='rvl-dec';o.setAttribute('aria-hidden','true');h.appendChild(o);h.classList.add('rvl-decoding');o.style.color='#e6f1ff';let f=0;const n=T.length,tick=()=>{f++;const k=Math.floor(f*n/38);let out='';for(let i=0;i<n;i++){const c=T[i];out+=(i<k||c===' '||c===','||c==='.')?c:C[(Math.random()*C.length)|0]}o.textContent=out;if(k<n)requestAnimationFrame(tick);else{o.remove();h.classList.remove('rvl-decoding')}};setTimeout(()=>requestAnimationFrame(tick),250)}})();(()=>{const r=document.querySelector('.rvl');if(!r||!('IntersectionObserver' in window))return;r.classList.add('rvl-js');const io=new IntersectionObserver((es)=>{for(const e of es)if(e.isIntersecting){e.target.classList.add('rvl-in');io.unobserve(e.target)}},{root:r,rootMargin:'0px 0px -8% 0px',threshold:.08});const m=r.querySelector('.rvl-mcta'),w=r.querySelector('#start');if(m)r.addEventListener('scroll',()=>{const wb=w?w.getBoundingClientRect():null;m.classList.toggle('on',r.scrollTop>innerHeight*.7&&!(wb&&wb.top<innerHeight&&wb.bottom>0))},{passive:true});r.querySelectorAll('.rvl-r').forEach(el=>{const b=el.getBoundingClientRect();if(b.top<innerHeight)el.classList.add('rvl-in');io.observe(el)})})();`;
 
 export default async function Welcome() {
-  const count = await waitlistCount();
   const live = billingEnabled();
   const founderOpen = !live || !founderCoupon() ? true : await founderUsed().then((n) => n < FOUNDER_LIMIT).catch(() => true);
   return (
     <div className="rvl" data-rv-landing="">
       <link rel="preload" as="image" href="/landing/hero.webp" imageSrcSet="/landing/hero-sm.webp 828w, /landing/hero.webp 1440w" imageSizes="100vw" fetchPriority="high" />
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      {founderOpen && <div className="rvl-promo">Founder pricing: <b>first 500 members get 50% off for life.</b> <a href={live ? '/pricing' : '#waitlist'} style={{ color: '#5eead4' }}>Claim your spot</a></div>}
+      {founderOpen && <div className="rvl-promo">Founder pricing: <b>first 500 members get 50% off for life.</b> <a href="/pricing" style={{ color: '#5eead4' }}>Claim your spot</a></div>}
       <nav className="rvl-nav"><div className="rvl-wrap">
         <a className="rvl-logo" href="/"><img src="/remoteview-icon.png" alt="" width={26} height={26} />REMOTEVIEW</a>
-        <div className="rvl-navlinks"><a className="rvl-hide" href="#features">Features</a><a className="rvl-hide" href="#pricing">Pricing</a><a href="/account?signin=1">Sign in</a><a className="rvl-btn" style={{ padding: '9px 14px', fontSize: 14 }} href="#waitlist"><span className="rvl-hide">Accept the mission</span><span className="rvl-show">Join</span></a></div>
+        <div className="rvl-navlinks"><a className="rvl-hide" href="#features">Features</a><a className="rvl-hide" href="#pricing">Pricing</a><a href="/account?signin=1">Sign in</a><a className="rvl-btn" style={{ padding: '9px 14px', fontSize: 14 }} href="/pricing"><span className="rvl-hide">Start free trial</span><span className="rvl-show">Free trial</span></a></div>
       </div></nav>
 
       <header className="rvl-hero">
@@ -172,11 +162,11 @@ export default async function Welcome() {
         <div className="rvl-ov rvl-gridov" aria-hidden="true" /><div className="rvl-ov rvl-lines" aria-hidden="true" /><div className="rvl-ov rvl-sweep" aria-hidden="true" />
         {[['62%', '34%', 'TRACK 01', '.9s', ''], ['74%', '58%', 'TRACK 02', '1.4s', ' rvl-tgt-x'], ['55%', '66%', 'TRACK 03', '1.9s', ' rvl-tgt-x'], ['82%', '28%', 'TRACK 04', '2.4s', '']].map(([l, t, n, d, x]) => <div key={n} className={'rvl-tgt' + x} aria-hidden="true" style={{ left: l, top: t, animationDelay: d }}><span>{n}</span></div>)}
         <div className="rvl-wrap">
-        <div className="rvl-kicker rvl-mono">// INCOMING BRIEFING · LAUNCHING SOON</div>
+        <div className="rvl-kicker rvl-mono">// LIVE NOW · 7-DAY FREE TRIAL</div>
         <h1>The whole world, live, <span>in one screen.</span></h1>
         <p className="rvl-lead">Aircraft, ships, satellites, hazards, weather and country risk on a single 3D globe, with AI briefings that tell you what changed and why it matters.</p>
-        <div className="rvl-cta"><a className="rvl-btn rvl-glitch" href="#waitlist">Accept the mission</a><a className="rvl-ghost rvl-glitch" href="/demo">Try the live demo</a></div>
-        {count !== null && count > 50 && <div className="rvl-count"><span className="rvl-dot" />{count.toLocaleString('en-US')} people on the waitlist</div>}
+        <div className="rvl-cta"><a className="rvl-btn rvl-glitch" href="/pricing">Start 7-day free trial</a><a className="rvl-ghost rvl-glitch" href="/demo">Try the live demo</a></div>
+        {founderOpen && <div className="rvl-count"><span className="rvl-dot" />Founder offer: 50% off forever for the first 500</div>}
       </div></header>
 
       <section className="rvl-sec" id="features"><div className="rvl-wrap">
@@ -204,32 +194,33 @@ export default async function Welcome() {
 
       <section className="rvl-sec" id="pricing"><div className="rvl-wrap">
         <h2 className="rvl-r">Simple pricing</h2>
-        <p className="rvl-sub rvl-r">{live ? 'Every plan starts with a 7-day free trial.' : 'Launching soon. Every plan starts with a 7-day free trial.'}{founderOpen ? ' The first 500 members lock in 50% off for life.' : ''}</p>
+        <p className="rvl-sub rvl-r">{'Every plan starts with a 7-day free trial.'}{founderOpen ? ' The first 500 members lock in 50% off for life.' : ''}</p>
         <div className="rvl-grid">{PLANS.map((p) => (
           <div key={p.name} className={'rvl-card rvl-r' + (p.featured ? ' rvl-feat' : '')}>
-            <span className="rvl-badge">{live ? '7-DAY FREE TRIAL' : 'LAUNCHING SOON'}</span>
+            <span className="rvl-badge">7-DAY FREE TRIAL</span>
             <h3 style={{ fontSize: 20 }}>{p.name}</h3>
             <p>{p.blurb}</p>
             <div className="rvl-price">{p.price}<small>{p.per}</small></div>
             <div className="rvl-cap">{p.alt} · 7-day free trial</div>
             <ul>{p.items.map((i) => <li key={i}>{i}</li>)}</ul>
-            <a className={p.featured ? 'rvl-btn' : 'rvl-ghost'} style={{ display: 'block', textAlign: 'center', marginTop: 14 }} href={p.name === 'Teams' ? 'mailto:remoteview@mail.grokbot.com?subject=RemoteView%20Teams' : live ? '/pricing' : '#waitlist'}>{p.name === 'Teams' ? 'Contact us' : live ? 'Start free trial' : 'Join the waitlist'}</a>
+            <a className={p.featured ? 'rvl-btn' : 'rvl-ghost'} style={{ display: 'block', textAlign: 'center', marginTop: 14 }} href={p.name === 'Teams' ? 'mailto:remoteview@mail.grokbot.com?subject=RemoteView%20Teams' : '/pricing'}>{p.name === 'Teams' ? 'Contact us' : 'Start free trial'}</a>
           </div>
         ))}</div>
-        <p className="rvl-cap" style={{ marginTop: 16 }}>{live ? <>Prices in US dollars. Taxes may apply. <a href="/pricing">Full pricing</a> · <a href="/terms#subscriptions">subscription terms</a>.</> : 'Prices in US dollars. Taxes may apply. Not yet available to buy.'}</p>
+        <p className="rvl-cap" style={{ marginTop: 16 }}><>Prices in US dollars. Taxes may apply. <a href="/pricing">Full pricing</a> · <a href="/terms#subscriptions">subscription terms</a>.</></p>
       </div></section>
 
-      <section className="rvl-sec" id="waitlist"><div className="rvl-wrap">
-        <h2>Accept the mission</h2>
-        <p className="rvl-sub">Be first to try RemoteView when it opens. We will only email you about early access and launch.</p>
-        <WaitlistForm consentText={CONSENT_TEXT} />
+      <section className="rvl-sec" id="start"><div className="rvl-wrap" style={{ textAlign: 'center' }}>
+        <h2>Start your 7-day free trial</h2>
+        <p className="rvl-sub" style={{ margin: '0 auto 28px' }}>Full access to every live layer and AI briefing. Cancel any time before the trial ends and you won&apos;t be charged.</p>
+        <div className="rvl-cta" style={{ justifyContent: 'center' }}><a className="rvl-btn" href="/pricing">Start 7-day free trial</a><a className="rvl-ghost" href="/demo">Try the live demo</a></div>
+        {founderOpen && <p className="rvl-cap" style={{ marginTop: 14 }}>Founder offer: 50% off forever for the first 500</p>}
       </div></section>
 
       <footer className="rvl-foot"><div className="rvl-wrap">
         <div>© {new Date().getFullYear()} RemoteView</div>
         <div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/credits">Data credits</a><a href="/demo">Demo</a><a href="https://discord.gg/T6VuJTnKC" target="_blank" rel="noopener noreferrer">Discord</a><a href="/login">Sign in</a></div>
       </div></footer>
-      <div className="rvl-mcta"><a className="rvl-ghost" style={{ background: 'rgba(3,9,18,.92)' }} href="/demo">Live demo</a><a className="rvl-btn" href="#waitlist">Accept the mission</a></div>
+      <div className="rvl-mcta"><a className="rvl-ghost" style={{ background: 'rgba(3,9,18,.92)' }} href="/demo">Live demo</a><a className="rvl-btn" href="/pricing">Start free trial</a></div>
       <script dangerouslySetInnerHTML={{ __html: reveal }} />
     </div>
   );

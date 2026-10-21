@@ -16,6 +16,11 @@ export default function AccountPanel({ billing }: { billing: boolean }) {
     if (q.get('checkout') !== 'success' || !me || me.entitled) return;
     let n = 0; const t = setInterval(() => { n++; load(); if (n > 15) clearInterval(t); }, 2000); return () => clearInterval(t);
   }, [me?.entitled]);
+  // Once checkout is confirmed, re-issue the session server-side and go straight into the app.
+  useEffect(() => {
+    if (q.get('checkout') !== 'success' || !me?.entitled) return;
+    const t = setTimeout(() => { location.href = '/api/account/refresh?next=/'; }, 1200); return () => clearTimeout(t);
+  }, [me?.entitled]);
   async function auth(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const f = new FormData(e.currentTarget); setBusy(true); setErr('');
     const r = await fetch(`/api/account/${mode === 'signup' ? 'signup' : 'login'}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: f.get('email'), password: f.get('password'), terms: f.get('terms') === 'on', website: f.get('website') }) });
@@ -32,6 +37,7 @@ export default function AccountPanel({ billing }: { billing: boolean }) {
     <div className="hud-card" data-file="FILE // ACCOUNT">
       <div className="hud-lbl">Signed in as</div><div style={{ fontSize: 20, marginBottom: 14 }}>{me.email}</div>
       {q.get('checkout') === 'success' && !me.entitled && <p style={{ color: '#5eead4' }}>Confirming your subscription with Stripe…</p>}
+      {q.get('checkout') === 'success' && me.entitled && <p style={{ color: '#5eead4' }}>You&apos;re in. Opening RemoteView…</p>}
       <table className="hud-t"><tbody>
         <tr><td>Plan</td><td>{me.plan ? `${me.plan[0].toUpperCase()}${me.plan.slice(1)} · ${me.interval === 'year' ? 'yearly' : 'monthly'}` : 'None'}{me.founder ? ' · founder price' : ''}</td></tr>
         <tr><td>Status</td><td>{me.status ? STATUS[me.status] || me.status : 'No subscription'}</td></tr>
@@ -40,7 +46,7 @@ export default function AccountPanel({ billing }: { billing: boolean }) {
       </tbody></table>
       {me.status === 'past_due' && <p style={{ color: '#fca5a5' }}>Your last payment failed. Update your card in billing to restore access.</p>}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
-        {me.entitled && <a className="hud-btn" href="/">Open RemoteView</a>}
+        {me.entitled && <a className="hud-btn" href="/api/account/refresh?next=/">Open RemoteView</a>}
         {!me.entitled && <a className="hud-btn" href="/pricing">Choose a plan</a>}
         {billing && me.status && <button type="button" className="hud-ghost" style={{ cursor: 'pointer', font: 'inherit', background: 'transparent' }} onClick={portal} disabled={busy}>Manage billing, invoices or cancel</button>}
         <button type="button" className="hud-ghost" style={{ cursor: 'pointer', font: 'inherit', background: 'transparent' }} onClick={logout}>Sign out</button>
