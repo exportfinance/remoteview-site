@@ -1,6 +1,7 @@
 /* /live/[topic] snapshots — commercially-fine sources only, cached hourly. */
 import { cached, getJson } from '@/lib/rvx/util';
 import { HANDLERS } from '@/lib/rvx/feeds';
+import { countryList } from '@/lib/seo/data';
 
 const HOUR = 3600_000;
 export type Row = Record<string, string | number | null>;
@@ -8,10 +9,11 @@ export type Snapshot = {
   headline: string; stat: string | null; statLabel: string; rows: Row[]; cols: [string, string][];
   points: [number, number][]; bbox: [number, number, number, number]; source: string; sourceUrl: string; fetched: string; note?: string;
 };
-export type Topic = { slug: string; title: string; h1: string; desc: string; kind: 'adsb-mil-eu' | 'adsb-taiwan' | 'aurora' | 'chokepoints' | 'uap' | 'unrest' | 'outages' | 'quakes' | 'choke'; demoLayers: string; choke?: string; group?: string };
+export type Topic = { slug: string; title: string; h1: string; desc: string; kind: 'adsb-mil-eu' | 'adsb-taiwan' | 'aurora' | 'chokepoints' | 'uap' | 'unrest' | 'outages' | 'quakes' | 'choke' | 'sitrooms'; demoLayers: string; choke?: string; group?: string };
 
 export const TOPICS: Topic[] = [
   { slug: 'conflict-and-unrest-today', title: 'Conflict and unrest today: live world map', h1: 'Conflict and unrest, today', desc: 'Conflict-related events, protests and unrest reported around the world in the last day, from the GDELT 2.0 event database, by country. Updated hourly.', kind: 'unrest', demoLayers: '', group: 'Conflict' },
+  { slug: 'situation-rooms', title: 'Situation rooms: Ukraine, Gaza, Taiwan, Red Sea and Sudan, live', h1: 'Situation rooms', desc: 'Live watch-views for the world’s hot spots: reported conflict and unrest, GPS jamming and anomaly signals for Ukraine, Gaza, Taiwan, the Red Sea and Sudan. Updated hourly.', kind: 'sitrooms', demoLayers: '', group: 'Conflict' },
   { slug: 'internet-outages-today', title: 'Internet outages today: live country map', h1: 'Internet outages, today', desc: 'Countries with internet outage alerts in the last 24 hours, from IODA (Georgia Tech) BGP, active probing and telescope signals. Updated hourly.', kind: 'outages', demoLayers: '', group: 'Infrastructure' },
   { slug: 'red-sea-shipping', title: 'Red Sea and Bab el-Mandeb shipping today', h1: 'Red Sea shipping, live', desc: 'Ships transiting the Bab el-Mandeb strait at the mouth of the Red Sea, with the share moving slowly or waiting, from live AIS. Updated hourly.', kind: 'choke', choke: 'bab', demoLayers: '', group: 'Shipping' },
   { slug: 'suez-canal-shipping', title: 'Suez Canal shipping today: live traffic', h1: 'Suez Canal shipping, live', desc: 'Vessels in and around the Suez Canal right now, with tanker counts and the share moving slowly, from live AIS. Updated hourly.', kind: 'choke', choke: 'suez', demoLayers: '', group: 'Shipping' },
@@ -48,10 +50,26 @@ export const CHOKEPOINTS: { name: string; lat: number; lng: number; links: strin
 export async function snapshot(t: Topic): Promise<Snapshot> {
   return cached('seo-live-' + t.slug, HOUR, async () => {
     const fetched = new Date().toISOString();
+    if (t.kind === 'sitrooms') {
+      const R: [string, number, number, number, number][] = [['Ukraine', 22, 44, 41, 53], ['Gaza', 34.2, 31.2, 34.6, 31.6], ['Taiwan', 118, 21, 123, 26.5], ['Red Sea', 32, 11, 44, 28], ['Sudan', 21.8, 8.6, 38.6, 22.3]];
+      const d: any = await HANDLERS.protests(new URLSearchParams()).catch(() => ({ features: [] }));
+      const j: any = await HANDLERS.jamming(new URLSearchParams()).catch(() => ({ features: [] }));
+      const inBox = (x: number, y: number, r: any) => x >= r[1] && x <= r[3] && y >= r[2] && y <= r[4];
+      const ctr = (g: any): [number, number] | null => { const c = g?.type === 'Point' ? g.coordinates : g?.coordinates?.[0]?.[0]; return Array.isArray(c) && typeof c[0] === 'number' ? [c[0], c[1]] : null; };
+      const pts: [number, number][] = [];
+      const rows = R.map((r) => {
+        const ev = (d.features || []).filter((e: any) => { const c = e.geometry?.coordinates; return c && inBox(c[0], c[1], r); });
+        const jm = (j.features || []).filter((e: any) => { const c = ctr(e.geometry); return c && inBox(c[0], c[1], r); });
+        pts.push([(r[1] + r[3]) / 2, (r[2] + r[4]) / 2]);
+        return { room: r[0], unrest: ev.length, jamming: jm.length };
+      });
+      return { headline: 'Signals in each situation room now', stat: String(rows.reduce((a, r) => a + r.unrest, 0)), statLabel: 'conflict and unrest events across all rooms (estimate)', rows, cols: [['room', 'Situation room'], ['unrest', 'Unrest events (GDELT)'], ['jamming', 'GPS jamming cells']], points: pts, bbox: [-10, 0, 130, 60], source: 'GDELT Project 2.0; ADS-B position quality (derived)', sourceUrl: 'https://www.gdeltproject.org', fetched, note: 'Counts are estimates from automated news coding and aircraft position-accuracy reports, not verified incidents. Open a room in the app to see every layer live.' };
+    }
     if (t.kind === 'unrest') {
       const d: any = await HANDLERS.protests(new URLSearchParams());
       const f = d.features || []; const by = new Map<string, number>();
-      for (const e of f) { const c = e.properties?.country || 'Unknown'; by.set(c, (by.get(c) || 0) + 1); }
+      const names = new Map((await countryList().catch(() => [])).map((c) => [c.fips, c.name] as [string, string]));
+      for (const e of f) { const c = names.get(e.properties?.country) || 'Other / unmatched'; by.set(c, (by.get(c) || 0) + 1); }
       const rows = [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25).map(([country, n]) => ({ country, events: n }));
       return { headline: 'Reported conflict and unrest events by country', stat: String(f.length), statLabel: 'events in the latest GDELT window', rows, cols: [['country', 'Country'], ['events', 'Events']], points: f.map((e: any) => e.geometry.coordinates), bbox: [-180, -60, 180, 75], source: 'GDELT Project 2.0 (open)', sourceUrl: 'https://www.gdeltproject.org', fetched, note: 'GDELT codes news reports automatically, so counts are an estimate of reported activity, not verified incidents.' };
     }
