@@ -67,6 +67,7 @@ export async function middleware(request: NextRequest) {
       );
     }
     if (pathname === '/privacy') return NextResponse.rewrite(new URL('/legal/privacy', request.url));
+    if (pathname === '/login') return NextResponse.redirect(new URL('/account?signin=1', request.url));
     if (COMMERCIAL_PUBLIC.has(pathname) || COMMERCIAL_PUBLIC_PREFIX.some((p) => pathname.startsWith(p))) return NextResponse.next();
   }
   if (PUBLIC.has(pathname) || pathname.startsWith('/_next/static/') || pathname.startsWith('/icons/')) {
