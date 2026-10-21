@@ -3,7 +3,7 @@ import SeoShell from '@/components/seo/Shell';
 import AccountPanel from '@/components/billing/AccountPanel';
 import { billingEnabled } from '@/lib/billing/config';
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Your account · RemoteView', robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: 'Your account', robots: { index: false, follow: false } };
 export default function Account() {
   return (
     <SeoShell>

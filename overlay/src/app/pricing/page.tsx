@@ -5,7 +5,7 @@ import { PLANS, TRIAL_DAYS, FOUNDER_LIMIT, FOUNDER_PERCENT, TEAMS_MAILTO, billin
 import { founderUsed } from '@/lib/accounts';
 import { PUBLIC_URL } from '@/lib/publicUrl';
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Pricing · RemoteView', description: `Personal and Pro plans with a ${TRIAL_DAYS}-day free trial. Founder pricing: ${FOUNDER_PERCENT}% off for life for the first ${FOUNDER_LIMIT} members.`, robots: { index: true, follow: true }, alternates: { canonical: PUBLIC_URL + '/pricing' } };
+export const metadata: Metadata = { title: 'Pricing', description: `Personal and Pro plans with a ${TRIAL_DAYS}-day free trial. Founder pricing: ${FOUNDER_PERCENT}% off for life for the first ${FOUNDER_LIMIT} members.`, robots: { index: true, follow: true }, alternates: { canonical: PUBLIC_URL + '/pricing' } };
 const g = globalThis as any;
 async function founderLeft(): Promise<number | null> {
   if (!founderCoupon()) return null;

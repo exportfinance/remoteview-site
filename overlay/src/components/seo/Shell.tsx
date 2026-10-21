@@ -10,7 +10,7 @@ export default function SeoShell({ children, jsonLd }: { children: React.ReactNo
       <div className="hud-w">
         <nav className="hud-nav"><Brand /><div style={{ display: 'flex', gap: 14, alignItems: 'center' }}><a className="hud-navx" href="/country" style={{ color: '#8ba3bd', textDecoration: 'none', fontSize: 14 }}>Countries</a><a className="hud-navx" href="/live" style={{ color: '#8ba3bd', textDecoration: 'none', fontSize: 14 }}>Live</a><a className="hud-btn" style={{ padding: '8px 14px', fontSize: 14 }} href="/pricing"><span className="hud-long">Start free trial</span><span className="hud-short">Free trial</span></a></div></nav>
         {children}
-        <footer className="hud-foot"><span>© RemoteView</span><a href="/">Home</a><a href="/demo">Live demo</a><a href="/country">Countries</a><a href="/live">Live maps</a><a href="/credits">Data credits</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
+        <footer className="hud-foot"><span>© RemoteView</span><a href="/">Home</a><a href="/demo">Live demo</a><a href="/country">Countries</a><a href="/live">Live maps</a><a href="/credits">Data credits</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:remoteview@mail.grokbot.com">remoteview@mail.grokbot.com</a></footer>
       </div>
     </div>
   );
