@@ -190,10 +190,9 @@ export default function RootLayout({
     <html lang="en" dir="ltr">
       <head>
         {IS_COMMERCIAL && <script dangerouslySetInnerHTML={{ __html: browserGuardScript() }} />}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link id="rv-fonts" rel="stylesheet" media="print" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" />
-        <script dangerouslySetInnerHTML={{ __html: "(function(){var l=document.getElementById('rv-fonts');if(!l)return;function on(){l.media='all'}if(l.sheet)on();else l.addEventListener('load',on)})()" }} />
+        {/* Self-hosted variable fonts (latin subset): no third-party stylesheet on the critical path. */}
+        <link rel="preload" href="/landing/inter-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <style dangerouslySetInnerHTML={{ __html: "@font-face{font-family:'Inter';font-style:normal;font-weight:300 700;font-display:swap;src:url(/landing/inter-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:300 700;font-display:swap;src:url(/landing/jbmono-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}" }} />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -213,7 +212,7 @@ export default function RootLayout({
         </ErrorBoundary>
         <RvExtras />
         {IS_COMMERCIAL && <DemoChrome />}
-        {IS_COMMERCIAL && <script data-goatcounter="/gc/count" async src="/gc/count.js" />}
+        {IS_COMMERCIAL && <script dangerouslySetInnerHTML={{ __html: "addEventListener('load',function(){setTimeout(function(){var s=document.createElement('script');s.async=true;s.src='/gc/count.js';s.setAttribute('data-goatcounter','/gc/count');document.body.appendChild(s)},1500)})" }} />}
         {IS_COMMERCIAL && <ShareButton />}
         {IS_COMMERCIAL && <BillingLink />}
         {IS_COMMERCIAL && (
