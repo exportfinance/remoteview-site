@@ -32,9 +32,9 @@ export default function AccountPanel({ billing }: { billing: boolean }) {
   }
   async function portal() { setBusy(true); const r = await fetch('/api/billing/portal', { method: 'POST' }); const j = await r.json().catch(() => ({})); if (j.url) location.href = j.url; else { setErr(j.error || 'Could not open billing.'); setBusy(false); } }
   async function logout() { await fetch('/api/account/logout', { method: 'POST' }); location.href = '/'; }
-  if (me === undefined) return <div className="hud-card" data-file="FILE // ACCOUNT" style={{ minHeight: 220 }}><p className="hud-lbl">Loading…</p></div>;
+  if (me === undefined) return <div className="hud-card" data-file="Account" style={{ minHeight: 220 }}><p className="hud-lbl">Loading…</p></div>;
   if (me) return (
-    <div className="hud-card" data-file="FILE // ACCOUNT">
+    <div className="hud-card" data-file="Account">
       <div className="hud-lbl">Signed in as</div><div style={{ fontSize: 20, marginBottom: 14 }}>{me.email}</div>
       {q.get('checkout') === 'success' && !me.entitled && <p style={{ color: '#5eead4' }}>Confirming your subscription with Stripe…</p>}
       {q.get('checkout') === 'success' && me.entitled && <p style={{ color: '#5eead4' }}>You&apos;re in. Opening RemoteView…</p>}
@@ -54,7 +54,7 @@ export default function AccountPanel({ billing }: { billing: boolean }) {
       {err && <p role="alert" style={{ color: '#fca5a5' }}>{err}</p>}
     </div>);
   return (
-    <form onSubmit={auth} className="hud-card" data-file={mode === 'signup' ? 'FILE // NEW AGENT' : 'FILE // SIGN IN'} style={{ display: 'grid', gap: 12, maxWidth: 460 }}>
+    <form onSubmit={auth} className="hud-card" data-file={mode === 'signup' ? 'Create account' : 'Sign in'} style={{ display: 'grid', gap: 12, maxWidth: 460 }}>
       <label className="hud-lbl">Email<input name="email" type="email" required autoComplete="email" maxLength={254} className="hud-in" /></label>
       <label className="hud-lbl">Password {mode === 'signup' && '(10+ characters)'}<input name="password" type="password" required minLength={mode === 'signup' ? 10 : 1} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} className="hud-in" /></label>
       <div aria-hidden="true" style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}><input name="website" tabIndex={-1} autoComplete="off" /></div>

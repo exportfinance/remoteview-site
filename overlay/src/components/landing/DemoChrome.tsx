@@ -10,6 +10,7 @@ export default function DemoChrome() {
   useEffect(() => {
     if (!isDemoLocation()) return;
     setDemo(true);
+    document.title = 'Live demo: real-time global intelligence map · RemoteView';
     let lastClick = 0;
     const onDown = () => { lastClick = Date.now(); };
     window.addEventListener('pointerdown', onDown, true);

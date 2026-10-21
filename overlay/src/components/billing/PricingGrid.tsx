@@ -12,7 +12,7 @@ export default function PricingGrid({ plans, enabled, founder, founderPct, trial
     </div>
     <div className="hud-grid">
       {plans.map((p) => { const list = iv === 'month' ? p.month : p.year; const now = Math.round(list * f * 100) / 100; return (
-        <div key={p.id} className="hud-card" data-file={`PLAN // ${p.name.toUpperCase()}`} style={p.featured ? { borderColor: 'rgba(45,212,191,.6)', boxShadow: '0 0 60px rgba(45,212,191,.12)' } : undefined}>
+        <div key={p.id} className="hud-card" data-file={p.name} style={p.featured ? { borderColor: 'rgba(45,212,191,.6)', boxShadow: '0 0 60px rgba(45,212,191,.12)' } : undefined}>
           <div style={{ fontSize: 22, fontWeight: 600 }}>{p.name}</div>
           <div className="hud-lbl" style={{ minHeight: 38 }}>{p.blurb}</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '14px 0 2px' }}>
@@ -23,7 +23,7 @@ export default function PricingGrid({ plans, enabled, founder, founderPct, trial
           <PlanButton plan={p.id} interval={iv} enabled={enabled} label={`Start ${trialDays}-day free trial`} />
           <ul style={{ margin: '16px 0 0', paddingLeft: 18, color: '#c9d8e8', fontSize: 14, lineHeight: 1.7 }}>{p.features.map((x) => <li key={x}>{x}</li>)}</ul>
         </div>); })}
-      <div className="hud-card" data-file="PLAN // TEAMS">
+      <div className="hud-card" data-file="Teams">
         <div style={{ fontSize: 22, fontWeight: 600 }}>Teams</div>
         <div className="hud-lbl" style={{ minHeight: 38 }}>Seats, shared case files and admin controls for desks and agencies.</div>
         <div style={{ margin: '14px 0 2px' }}><span className="hud-big" style={{ fontSize: 40 }}>from $299</span><span className="hud-lbl">/mo</span></div>

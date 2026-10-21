@@ -15,6 +15,6 @@ export default function SeoShell({ children, jsonLd }: { children: React.ReactNo
     </div>
   );
 }
-export function Cta({ title = 'See it live on the globe', sub = 'Flights, satellites, quakes, weather and country risk in one screen. No sign-up for the demo.' }: { title?: string; sub?: string }) {
+export function Cta({ title = 'Critical world events, as they happen', sub = 'Conflict signals, internet outages, shipping chokepoints, country risk and breaking disasters on one live map.' }: { title?: string; sub?: string }) {
   return <div className="hud-cta"><div><div className="hud-mono" style={{ fontSize: 11, letterSpacing: '.25em', color: '#5eead4' }}>// NEXT STEP</div><div style={{ fontSize: 22, margin: '6px 0' }}>{title}</div><div className="hud-lbl">{sub}</div></div><div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}><a className="hud-ghost" href="/demo">Open live demo</a><a className="hud-btn" href="/pricing">Start 7-day free trial</a></div></div>;
 }
