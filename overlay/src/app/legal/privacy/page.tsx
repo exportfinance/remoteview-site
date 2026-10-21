@@ -13,6 +13,8 @@ export default function Privacy() {
         <li>A one-way hash of your IP address and your browser&apos;s user-agent string, used only to stop spam and abuse.</li>
         <li>A random referral code for you, which friend (by code) referred you, and how many people joined with your link. These set your queue position.</li>
       </ul>
+      <h2>Accounts and payments</h2>
+      <p>If you create an account we store your email, a salted scrypt hash of your password (never the password itself), and your plan, subscription status and renewal dates. Payments are processed by Stripe, Inc., which receives your card and billing details directly; we never see or store your full card number. We keep your Stripe customer and subscription IDs to link your account. Stripe&apos;s own privacy policy covers what it holds.</p>
       <h2>Shared snapshots</h2>
       <p>If you press Share in the app, we store the map view (position, zoom, layer names) and a screenshot of the map so anyone with the link can see it. We store no account or personal details with it, apart from a one-way hash of your IP address for abuse limits. Anyone with the link can view a snapshot.</p>
       <h2>Why, and our legal basis</h2>

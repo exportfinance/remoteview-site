@@ -5,6 +5,7 @@ import "./globals.css";
 import { IS_COMMERCIAL, browserGuardScript } from '@/lib/edition';
 import DemoChrome from '@/components/landing/DemoChrome';
 import ShareButton from '@/components/share/ShareButton';
+import BillingLink from '@/components/billing/BillingLink';
 
 const SITE_URL = "https://remoteview.online";
 const SITE_NAME = "REMOTEVIEW";
@@ -199,6 +200,7 @@ export default function RootLayout({
         <RvExtras />
         {IS_COMMERCIAL && <DemoChrome />}
         {IS_COMMERCIAL && <ShareButton />}
+        {IS_COMMERCIAL && <BillingLink />}
         {IS_COMMERCIAL && (
           <a href="/credits" style={{ position: 'fixed', left: 8, bottom: 44, zIndex: 40, fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,.55)', background: 'rgba(0,0,0,.45)', padding: '2px 6px', borderRadius: 4, textDecoration: 'none' }}>Data credits</a>
         )}
