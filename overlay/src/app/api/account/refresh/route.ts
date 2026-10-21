@@ -11,6 +11,6 @@ export async function GET(req: Request) {
   const cur = await currentUser();
   if (!cur) return clearSession(NextResponse.redirect(new URL('/account?signin=1', PUBLIC_URL + '/')));
   const ok = entitled(cur.user);
-  const res = NextResponse.redirect(new URL(ok ? safeNext : '/pricing?need=plan', PUBLIC_URL + '/'));
+  const res = NextResponse.redirect(new URL(ok ? safeNext : safeNext === '/' ? '/' : '/pricing?need=plan', PUBLIC_URL + '/'));
   return setSession(res, cur.user, isSecure(req), cur.loginExp);
 }

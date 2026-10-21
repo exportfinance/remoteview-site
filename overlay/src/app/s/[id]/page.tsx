@@ -29,7 +29,7 @@ export default async function Snapshot({ params }: { params: Promise<{ id: strin
         {s.hasImage ? <img src={`/s/${s.id}/image`} width={1200} height={630} alt={`Map snapshot${s.place ? ` over ${s.place}` : ''}`} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 3, aspectRatio: '1200/630', objectFit: 'cover', background: '#06182a' }} /> : <div className="hud-lbl" style={{ padding: 40, textAlign: 'center' }}>No image was captured for this view.</div>}
       </div>
       {layers.length > 0 && <div className="hud-links" style={{ marginTop: 14 }}>{layers.slice(0, 20).map((l) => <span key={l} style={{ fontSize: 13, border: '1px solid rgba(45,212,191,.18)', padding: '6px 10px', borderRadius: 999 }}>{pretty(l)}</span>)}</div>}
-      <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}><a className="hud-btn" href={live}>Open this view live</a><a className="hud-ghost" href="/#waitlist">Accept the mission</a></div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}><a className="hud-btn" href={live}>Open this view live</a><a className="hud-ghost" href="/pricing">Start 7-day free trial</a></div>
       <p className="hud-lbl" style={{ marginTop: 10 }}>A read-only picture of the map when it was shared. Opening it live shows what is happening now.</p>
       <Cta />
     </SeoShell>

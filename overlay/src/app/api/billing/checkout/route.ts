@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 const INTEGRATION_ID = process.env.STRIPE_INTEGRATION_ID ?? 'remoteview_subscribe_qhzmwtpa';
 
 export async function POST(req: Request) {
-  if (!billingEnabled()) return NextResponse.json({ error: 'Billing is not open yet.', fallback: '/#waitlist' }, { status: 503 });
+  if (!billingEnabled()) return NextResponse.json({ error: 'Billing is not open yet.', fallback: '/pricing' }, { status: 503 });
   if (!sameOrigin(req)) return NextResponse.json({ error: 'Bad origin' }, { status: 403 });
   if (isRateLimited('checkout:' + getClientIp(req), 10, 10 * 60_000)) return NextResponse.json({ error: 'Too many attempts.' }, { status: 429 });
   const cur = await currentUser();
