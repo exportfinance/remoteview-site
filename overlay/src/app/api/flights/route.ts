@@ -1,5 +1,6 @@
 
 import { NextResponse } from 'next/server';
+import { IS_COMMERCIAL } from '@/lib/edition';
 import { stealthFetch } from '@/lib/stealthFetch';
 
 export const maxDuration = 60;
@@ -120,7 +121,8 @@ const JET_CRUISE_KTS = 300;
 // zero aircraft without ever throwing. Provider counts are reported in the
 // response now so the next feed to die is visible instead of silent.
 const ADSB_MAX_DIST = 250; // nm — hard cap the provider enforces
-const ADSBFI_BASE = 'https://opendata.adsb.fi/api/v2';
+// Commercial edition: adsb.lol (ODbL) only — adsb.fi terms unverified.
+const ADSBFI_BASE = IS_COMMERCIAL ? 'https://api.adsb.lol/v2' : 'https://opendata.adsb.fi/api/v2';
 
 // adsb.fi allows roughly one request per second and soft-throttles over that by
 // returning 200 with an empty ac[] rather than 429, so a parallel fanout looks
@@ -430,8 +432,8 @@ export async function GET() {
 
     const [milRes, osRes] = await Promise.allSettled([
       stealthFetch(`${ADSBFI_BASE}/mil`, { signal: AbortSignal.timeout(15000) }),
-      skipOpenSky
-        ? Promise.reject(new Error('OpenSky in cooldown'))
+      skipOpenSky || IS_COMMERCIAL
+        ? Promise.reject(new Error(IS_COMMERCIAL ? 'OpenSky not used in this edition' : 'OpenSky in cooldown'))
         // extended=1 appends the ADS-B emitter category as an 18th field. Without
         // it the state vector is 17 long and s[17] below is silently undefined,
         // which is what made every category_os test in classifyFlight() dead.

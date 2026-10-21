@@ -3,6 +3,7 @@ import { HANDLERS, AI_FEEDS } from '@/lib/rvx/feeds';
 import { json, allow } from '@/lib/rvx/util';
 import { getClientIp } from '@/lib/ssrf-guard';
 import { ensureHistory } from '@/lib/rvx/live';
+import { IS_COMMERCIAL, BLOCKED_FEEDS } from '@/lib/edition';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -10,7 +11,7 @@ export const maxDuration = 60;
 async function handle(req: NextRequest, ctx: { params: Promise<{ feed: string }> }, body?: any) {
   const { feed } = await ctx.params;
   const h = HANDLERS[feed];
-  if (!h) return json({ error: 'unknown feed' }, 0, 404);
+  if (!h || (IS_COMMERCIAL && BLOCKED_FEEDS.has(feed))) return json({ error: 'unknown feed' }, 0, 404);
   ensureHistory();
   const ip = getClientIp(req);
   if (!allow(ip, AI_FEEDS.has(feed) ? 'ai' : 'feed', AI_FEEDS.has(feed) ? 10 : 240)) return json({ error: 'rate limited' }, 0, 429);
