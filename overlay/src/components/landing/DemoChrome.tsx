@@ -31,7 +31,7 @@ export default function DemoChrome() {
             <div style={{ fontSize: 12, letterSpacing: '.2em', color: '#2DD4BF' }}>FULL VERSION</div>
             <h2 style={{ margin: '8px 0', fontSize: 22 }}>Unlock {upsell}</h2>
             <p style={{ color: '#9fb3c8', lineHeight: 1.55 }}>AI briefings, ships, PDF reports, case files, link graphs, sanctions search and 40+ more layers are in the full app. Every plan starts with a 7-day free trial.</p>
-            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}><a href="/#waitlist" style={cta}>Start free trial</a><button onClick={() => setUpsell(null)} style={{ background: 'transparent', color: '#9fb3c8', border: '1px solid #1e3a5f', borderRadius: 8, padding: '7px 12px' }}>Keep exploring</button></div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}><a href="/#waitlist" style={cta}>Accept the mission</a><button onClick={() => setUpsell(null)} style={{ background: 'transparent', color: '#9fb3c8', border: '1px solid #1e3a5f', borderRadius: 8, padding: '7px 12px' }}>Keep exploring</button></div>
           </div>
         </div>
       )}

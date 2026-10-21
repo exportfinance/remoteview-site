@@ -140,6 +140,7 @@ body:has([data-rv-landing])>a[href="/credits"]{display:none}
 .rvl-dossier{position:relative;border-radius:4px!important;background:linear-gradient(180deg,rgba(13,24,40,.9),rgba(6,14,26,.9))!important;padding-top:46px!important}
 .rvl-dossier::before{content:attr(data-file);position:absolute;top:0;left:0;right:0;padding:9px 16px;font:10.5px 'JetBrains Mono',monospace;letter-spacing:.2em;color:#5eead4;border-bottom:1px dashed rgba(45,212,191,.3);background:rgba(45,212,191,.05)}
 .rvl-dossier::after{content:"OPEN SOURCE";position:absolute;top:34px;right:12px;font:700 9px 'JetBrains Mono',monospace;letter-spacing:.2em;color:rgba(244,63,94,.75);border:1px solid rgba(244,63,94,.55);padding:3px 6px;transform:rotate(6deg)}
+.rvl-nostamp::after{display:none}
 .rvl-dossier h3{font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em;font-size:14.5px}
 @media(max-width:860px){.rvl-tgt.rvl-tgt-x{display:none}}
 @media(prefers-reduced-motion:reduce){.rvl-decoding{color:inherit!important}.rvl *,.rvl *::before,.rvl *::after{animation:none!important;transition:none!important}.rvl-js .rvl-r{opacity:1;transform:none}}
