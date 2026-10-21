@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import RvExtras from '@/components/rvx/RvExtrasLazy';
 import "./globals.css";
+import { IS_COMMERCIAL, browserGuardScript } from '@/lib/edition';
+import DemoChrome from '@/components/landing/DemoChrome';
 
 const SITE_URL = "https://remoteview.online";
 const SITE_NAME = "REMOTEVIEW";
@@ -171,18 +173,21 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <head>
+        {IS_COMMERCIAL && <script dangerouslySetInnerHTML={{ __html: browserGuardScript() }} />}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link id="rv-fonts" rel="stylesheet" media="print" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" />
+        <script dangerouslySetInnerHTML={{ __html: "(function(){var l=document.getElementById('rv-fonts');if(!l)return;function on(){l.media='all'}if(l.sheet)on();else l.addEventListener('load',on)})()" }} />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="canonical" href={SITE_URL} />
+        {!IS_COMMERCIAL && <link rel="canonical" href={SITE_URL} />}
         
         {/* JSON-LD Structured Data */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: IS_COMMERCIAL ? '{}' : JSON.stringify(jsonLd) }}
         />
 
       </head>
@@ -191,6 +196,10 @@ export default function RootLayout({
           {children}
         </ErrorBoundary>
         <RvExtras />
+        {IS_COMMERCIAL && <DemoChrome />}
+        {IS_COMMERCIAL && (
+          <a href="/credits" style={{ position: 'fixed', left: 8, bottom: 44, zIndex: 40, fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,.55)', background: 'rgba(0,0,0,.45)', padding: '2px 6px', borderRadius: 4, textDecoration: 'none' }}>Data credits</a>
+        )}
       </body>
     </html>
   );
