@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /* Inline the global stylesheet into the HTML: saves a render-blocking round trip on first paint (production only). */
+  experimental: { inlineCss: true },
   turbopack: {
     rules: {
       'maplibre-gl.mjs': {
@@ -59,6 +61,11 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
+      },
+      // Landing images and self-hosted fonts: cache for a week.
+      {
+        source: '/landing/:file*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' }],
       },
       {
         // Embeds are meant to be framed by any site (the backlink engine); everything else stays same-origin.
