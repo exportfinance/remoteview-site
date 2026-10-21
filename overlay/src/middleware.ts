@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { AUTH_COOKIE, verifyToken, internalKey } from '@/lib/siteAuth';
 import { IS_COMMERCIAL, isBlockedPath } from '@/lib/edition';
 import { isDemoApi, DEMO_COOKIE } from '@/lib/demoLists';
+import { USER_COOKIE, readUserToken } from '@/lib/userSession';
 
 /* RemoteView is private: every page, API route and data file needs a valid
    session cookie. Only the login page/endpoint, Next static chunks, icons,
@@ -14,9 +15,9 @@ const PUBLIC = new Set([
   '/manifest.json', '/site.webmanifest', '/sw.js',
 ]);
 
-const COMMERCIAL_PUBLIC = new Set(['/welcome', '/legal/privacy', '/terms', '/credits', '/api/waitlist', '/api/waitlist/position', '/sitemap.xml', '/country', '/live']);
+const COMMERCIAL_PUBLIC = new Set(['/welcome', '/legal/privacy', '/terms', '/credits', '/api/waitlist', '/api/waitlist/position', '/sitemap.xml', '/country', '/live', '/pricing', '/account', '/api/billing/webhook', '/api/billing/checkout', '/api/billing/portal']);
 /* Public growth pages: SEO country/live pages, embeds and shared snapshots. */
-const COMMERCIAL_PUBLIC_PREFIX = ['/landing/', '/country/', '/live/', '/embed/', '/s/'];
+const COMMERCIAL_PUBLIC_PREFIX = ['/landing/', '/country/', '/live/', '/embed/', '/s/', '/api/account/'];
 
 async function demoToken(secret: string) {
   const enc = new TextEncoder();
@@ -61,7 +62,7 @@ export async function middleware(request: NextRequest) {
     if (pathname === '/robots.txt') {
       const base = (process.env.RV_PUBLIC_URL || request.nextUrl.origin).replace(/\/$/, '');
       return new NextResponse(
-        `User-agent: *\nAllow: /$\nAllow: /landing/\nAllow: /privacy\nAllow: /terms\nAllow: /credits\nAllow: /country\nAllow: /live\nDisallow: /\n\nSitemap: ${base}/sitemap.xml\n`,
+        `User-agent: *\nAllow: /$\nAllow: /landing/\nAllow: /privacy\nAllow: /terms\nAllow: /credits\nAllow: /country\nAllow: /live\nAllow: /pricing\nDisallow: /\n\nSitemap: ${base}/sitemap.xml\n`,
         { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' } },
       );
     }
@@ -76,6 +77,19 @@ export async function middleware(request: NextRequest) {
     (await verifyToken(secret, request.cookies.get(AUTH_COOKIE)?.value)) ||
     (!!secret && request.headers.get('x-rv-internal') === (await internalKey(secret)));
   if (ok) return noindex(NextResponse.next());
+  // Paying customers (commercial): a trialing/active subscription unlocks the full app.
+  if (IS_COMMERCIAL) {
+    const u = await readUserToken(secret, request.cookies.get(USER_COOKIE)?.value);
+    if (u) {
+      const isApi = pathname.startsWith('/api/');
+      if (u.ent && u.entFresh) return noindex(NextResponse.next());
+      if (u.ent && !u.entFresh && !isApi && request.method === 'GET') {
+        const r = new URL('/api/account/refresh', request.url); r.searchParams.set('next', pathname + search);
+        return NextResponse.redirect(r);
+      }
+      if (isApi && !(request.cookies.get(DEMO_COOKIE))) return noindex(NextResponse.json({ error: 'An active plan is required', upsell: '/pricing' }, { status: 402 }));
+    }
+  }
   if (IS_COMMERCIAL && (pathname === '/demo' || pathname === '/demo/')) {
     if (demoLimited('page:' + clientIp(request), 20)) return new NextResponse('Too many requests', { status: 429 });
     const res = NextResponse.rewrite(new URL('/', request.url));

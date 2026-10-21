@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import WaitlistForm from '@/components/landing/WaitlistForm';
 import { CONSENT_TEXT, signupStats } from '@/lib/waitlist';
+import { billingEnabled, founderCoupon, FOUNDER_LIMIT } from '@/lib/billing/config';
+import { founderUsed } from '@/lib/accounts';
 import { PUBLIC_URL } from '@/lib/publicUrl';
 
 export const dynamic = 'force-dynamic';
@@ -152,14 +154,16 @@ const reveal = `(()=>{const h=document.querySelector('.rvl-hero h1');if(h&&!matc
 
 export default async function Welcome() {
   const count = await waitlistCount();
+  const live = billingEnabled();
+  const founderOpen = !live || !founderCoupon() ? true : await founderUsed().then((n) => n < FOUNDER_LIMIT).catch(() => true);
   return (
     <div className="rvl" data-rv-landing="">
       <link rel="preload" as="image" href="/landing/hero.webp" imageSrcSet="/landing/hero-sm.webp 828w, /landing/hero.webp 1440w" imageSizes="100vw" fetchPriority="high" />
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div className="rvl-promo">Founder pricing: <b>first 500 members get 50% off for life.</b> <a href="#waitlist" style={{ color: '#5eead4' }}>Claim your spot</a></div>
+      {founderOpen && <div className="rvl-promo">Founder pricing: <b>first 500 members get 50% off for life.</b> <a href={live ? '/pricing' : '#waitlist'} style={{ color: '#5eead4' }}>Claim your spot</a></div>}
       <nav className="rvl-nav"><div className="rvl-wrap">
         <a className="rvl-logo" href="/"><img src="/remoteview-icon.png" alt="" width={26} height={26} />REMOTEVIEW</a>
-        <div className="rvl-navlinks"><a className="rvl-hide" href="#features">Features</a><a className="rvl-hide" href="#pricing">Pricing</a><a href="/login">Sign in</a><a className="rvl-btn" style={{ padding: '9px 14px', fontSize: 14 }} href="#waitlist"><span className="rvl-hide">Accept the mission</span><span className="rvl-show">Join</span></a></div>
+        <div className="rvl-navlinks"><a className="rvl-hide" href="#features">Features</a><a className="rvl-hide" href="#pricing">Pricing</a><a href="/account?signin=1">Sign in</a><a className="rvl-btn" style={{ padding: '9px 14px', fontSize: 14 }} href="#waitlist"><span className="rvl-hide">Accept the mission</span><span className="rvl-show">Join</span></a></div>
       </div></nav>
 
       <header className="rvl-hero">
@@ -200,18 +204,19 @@ export default async function Welcome() {
 
       <section className="rvl-sec" id="pricing"><div className="rvl-wrap">
         <h2 className="rvl-r">Simple pricing</h2>
-        <p className="rvl-sub rvl-r">Launching soon. Every plan starts with a 7-day free trial, and the first 500 members lock in 50% off for life.</p>
+        <p className="rvl-sub rvl-r">{live ? 'Every plan starts with a 7-day free trial.' : 'Launching soon. Every plan starts with a 7-day free trial.'}{founderOpen ? ' The first 500 members lock in 50% off for life.' : ''}</p>
         <div className="rvl-grid">{PLANS.map((p) => (
           <div key={p.name} className={'rvl-card rvl-r' + (p.featured ? ' rvl-feat' : '')}>
-            <span className="rvl-badge">LAUNCHING SOON</span>
+            <span className="rvl-badge">{live ? '7-DAY FREE TRIAL' : 'LAUNCHING SOON'}</span>
             <h3 style={{ fontSize: 20 }}>{p.name}</h3>
             <p>{p.blurb}</p>
             <div className="rvl-price">{p.price}<small>{p.per}</small></div>
             <div className="rvl-cap">{p.alt} · 7-day free trial</div>
             <ul>{p.items.map((i) => <li key={i}>{i}</li>)}</ul>
+            <a className={p.featured ? 'rvl-btn' : 'rvl-ghost'} style={{ display: 'block', textAlign: 'center', marginTop: 14 }} href={p.name === 'Teams' ? 'mailto:remoteview@mail.grokbot.com?subject=RemoteView%20Teams' : live ? '/pricing' : '#waitlist'}>{p.name === 'Teams' ? 'Contact us' : live ? 'Start free trial' : 'Join the waitlist'}</a>
           </div>
         ))}</div>
-        <p className="rvl-cap" style={{ marginTop: 16 }}>Prices in US dollars. Taxes may apply. Not yet available to buy.</p>
+        <p className="rvl-cap" style={{ marginTop: 16 }}>{live ? <>Prices in US dollars. Taxes may apply. <a href="/pricing">Full pricing</a> · <a href="/terms#subscriptions">subscription terms</a>.</> : 'Prices in US dollars. Taxes may apply. Not yet available to buy.'}</p>
       </div></section>
 
       <section className="rvl-sec" id="waitlist"><div className="rvl-wrap">
