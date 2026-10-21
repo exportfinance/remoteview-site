@@ -208,3 +208,20 @@ export async function dossier(lng: number, lat: number) {
     exim: exv ? { row: exRow || null, footnotes: exRow ? Object.fromEntries(exRow.notes.map((n) => [n, exv.footnotes[n] || ''])) : {}, asOf: exv.asOf, url: exv.url, pdf: exv.pdf, note: exv.note } : { error: (ex as PromiseRejectedResult).reason?.message },
   };
 }
+
+/* Country colouring for OECD risk, FCDO advice and US State Dept advisory levels. */
+const FIPS_FIX: Record<string, string> = { NO: 'NO', IL: 'IS', SS: 'OD' };
+export const fipsOf = (c: { fips: string; iso2: string }) => FIPS_FIX[c.iso2] || (c.fips && c.fips !== '-99' ? c.fips : '');
+export async function riskLayer(kind: 'oecd' | 'fcdo' | 'state') {
+  const g = await import('./gov');
+  const { list, geo } = await countries();
+  const src: any = kind === 'oecd' ? await g.oecd() : kind === 'fcdo' ? await g.fcdoAll() : await g.stateDept();
+  const features = geo.features.map((f: any, i: number) => {
+    const c = list[i]; let v: number | null = null; let label = '';
+    if (kind === 'oecd') { const r = src.rows.find((r: any) => r.iso3 === c.iso3); if (r) { v = r.current === '-' ? null : Number(r.current); label = r.current === '-' ? 'not classified' : `category ${r.current}`; } }
+    if (kind === 'fcdo') { const r: any = matchName(src.rows, c.name, c.long); if (r) { v = r.level; label = r.alerts.join('; ') || 'no warnings'; } }
+    if (kind === 'state') { const fp = fipsOf(c); const r = src.rows.find((r: any) => r.fips === fp); if (r) { v = r.level; label = r.label; } }
+    return { ...f, properties: { ...f.properties, v: v ?? -1, label } };
+  });
+  return { type: 'FeatureCollection', features, meta: { source: src.source, fetched: new Date().toISOString(), asOf: src.asOf || null, url: src.url, matched: features.filter((f: any) => f.properties.v >= 0).length } };
+}

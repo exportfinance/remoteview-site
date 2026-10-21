@@ -1,7 +1,8 @@
 /* RemoteView extras: official country indicators for the dossier.
    FCDO travel advice (gov.uk content API, OGL), World Bank WDI + WGI APIs, IMF DataMapper (WEO). */
 import { cached, getJson } from './util';
-import { matchName } from './country';
+import { matchName, fipsOf } from './country';
+import { oecd, stateDept } from './gov';
 
 const DAY = 24 * 3600_000;
 const FCDO_LABEL: Record<string, string> = {
@@ -52,13 +53,15 @@ async function imf(iso3: string) {
   }).filter(Boolean);
   return { rows, source: 'IMF DataMapper (World Economic Outlook); current and future years are IMF projections', url: `https://www.imf.org/external/datamapper/profile/${iso3}` };
 }
-export async function intel(c: { name: string; long: string; iso2: string; iso3: string }) {
-  const [f, w, m] = await Promise.allSettled([fcdo(c.name, c.long), worldbank(c.iso2), imf(c.iso3)]);
+export async function intel(c: { name: string; long: string; iso2: string; iso3: string; fips: string }) {
+  const [f, w, m, o, sd] = await Promise.allSettled([fcdo(c.name, c.long), worldbank(c.iso2), imf(c.iso3), oecd(), stateDept()]);
   const val = (r: PromiseSettledResult<any>) => (r.status === 'fulfilled' ? r.value : { error: (r.reason as Error)?.message });
+  const ov = o.status === 'fulfilled' ? o.value : null; const orow = ov?.rows.find((r) => r.iso3 === c.iso3);
+  const sv = sd.status === 'fulfilled' ? sd.value : null; const srow = sv?.rows.find((r) => r.fips === fipsOf(c));
   return { fcdo: val(f), worldbank: val(w), imf: val(m),
+    oecd: ov ? { row: orow || null, noteText: orow ? orow.notes.map((n) => ov.notes[n]).filter(Boolean) : [], asOf: ov.asOf, url: ov.url } : { error: (o as PromiseRejectedResult).reason?.message },
+    state: sv ? { row: srow || null, url: srow?.url || sv.url } : { error: (sd as PromiseRejectedResult).reason?.message },
     skipped: {
-      'OECD country risk': 'Published as a PDF/XLSX on oecd.org; not yet integrated',
-      'US State Dept advisories': 'not yet integrated',
       'Sovereign ratings': 'No free official machine-readable source (S&P/Moody\'s/Fitch are proprietary)',
       'ReliefWeb': 'API now requires an approved appname (free request at apidoc.reliefweb.int)',
       'trade.gov Consolidated Screening List': 'API requires a free subscription key from developer.trade.gov',
