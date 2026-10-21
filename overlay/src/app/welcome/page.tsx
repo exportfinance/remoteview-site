@@ -32,7 +32,7 @@ const FEATURES = [
 
 const PLANS = [
   { name: 'Personal', price: '$19.99', per: '/mo', alt: 'or $199/yr', blurb: 'For enthusiasts and independent researchers.', items: ['Every live layer', 'AI briefings and Q&A (fair use)', 'Saved watchlists and alerts', '1 user'] },
-  { name: 'Pro', price: '$99', per: '/mo', alt: 'or $990/yr', blurb: 'For analysts, journalists and risk professionals.', items: ['Everything in Personal', 'Higher AI limits', 'PDF country reports and case files', 'Priority support'], featured: true },
+  { name: 'Pro', price: '$49.50', per: '/mo', alt: 'or $495/yr', blurb: 'For analysts, journalists and risk professionals.', items: ['Everything in Personal', 'Higher AI limits', 'PDF country reports and case files', 'Priority support'], featured: true },
   { name: 'Teams', price: 'From $299', per: '/mo', alt: 'Quote on request', blurb: 'For newsrooms, security and risk teams.', items: ['Everything in Pro', 'Multiple seats', 'Shared cases and situation rooms', 'Onboarding'] },
 ];
 

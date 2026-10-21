@@ -47,7 +47,7 @@ export default function WaitlistForm({ consentText }: { consentText: string }) {
     const copy = async () => { if (!link) return; try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {} };
     const native = async () => { if (link && (navigator as any).share) try { await (navigator as any).share({ title: 'RemoteView', text, url: link }); } catch {} };
     return (
-      <div className="rvl-card rvl-dossier rvl-nostamp" data-file="MISSION ACCEPTED" role="status" style={{ textAlign: 'center', padding: '52px 28px 30px' }}>
+      <div className="rvl-card rvl-dossier rvl-nostamp" data-file="YOU'RE ON THE LIST" role="status" style={{ textAlign: 'center', padding: '52px 28px 30px' }}>
         {me?.position ? <>
           <div className="rvl-mono" style={{ fontSize: 13, letterSpacing: '.25em', color: '#5eead4' }}>QUEUE POSITION</div>
           <div style={{ fontSize: 'clamp(44px,8vw,72px)', fontWeight: 700, lineHeight: 1.05, margin: '6px 0' }}>You’re #{me.position.toLocaleString('en-US')}</div>
@@ -85,7 +85,7 @@ export default function WaitlistForm({ consentText }: { consentText: string }) {
         <label>Website<input name="website" type="text" tabIndex={-1} autoComplete="off" /></label>
       </div>
       <label className="rvl-consent"><input name="consent" type="checkbox" required /> <span>{consentText} See our <a href="/privacy">privacy notice</a>.</span></label>
-      <button type="submit" className="rvl-btn" disabled={state === 'busy'}>{state === 'busy' ? 'Transmitting…' : 'Accept the mission'}</button>
+      <button type="submit" className="rvl-btn" disabled={state === 'busy'}>{state === 'busy' ? 'Transmitting…' : 'Start free trial'}</button>
       {msg && <p role="alert" style={{ color: '#fca5a5', margin: '8px 0 0' }}>{msg}</p>}
     </form>
   );

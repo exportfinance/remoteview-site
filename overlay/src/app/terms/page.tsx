@@ -9,7 +9,7 @@ export default function Terms() {
       <p>Joining the waitlist does not create any obligation for you or for us.</p>
       <h2 id="subscriptions">Subscriptions, cancellation and refunds <span style={{ color: '#fbbf24', fontSize: 13 }}>(DRAFT, not yet reviewed by a lawyer)</span></h2>
       <ul>
-        <li><b>Plans and prices.</b> Personal is $34.99 a month or $349 a year; Pro is $99 a month or $990 a year, in US dollars. Taxes are added where the law requires. Teams is quoted separately.</li>
+        <li><b>Plans and prices.</b> Personal is $19.99 a month or $199 a year; Pro is $49.50 a month or $495 a year, in US dollars. Taxes are added where the law requires. Teams is quoted separately.</li>
         <li><b>Free trial.</b> Each plan starts with a 7-day free trial. We take your card at sign-up through Stripe, but charge nothing during the trial. If you do not cancel before the trial ends, your subscription starts and the first payment is taken automatically. One trial per person.</li>
         <li><b>Founder pricing.</b> The first 500 subscribers get 50% off for as long as that subscription stays active. If you cancel and later resubscribe, the founder discount may not be available.</li>
         <li><b>Renewal.</b> Subscriptions renew automatically each month or year at the then-current price for your plan, until cancelled. We will tell you before any price change takes effect.</li>
