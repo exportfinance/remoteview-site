@@ -15,6 +15,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=src /app/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN node tools/build-ufo.mjs
 RUN npm run build
 
 FROM node:22-alpine AS runner
