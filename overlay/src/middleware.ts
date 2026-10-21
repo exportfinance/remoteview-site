@@ -87,6 +87,11 @@ export async function middleware(request: NextRequest) {
         const r = new URL('/api/account/refresh', request.url); r.searchParams.set('next', pathname + search);
         return NextResponse.redirect(r);
       }
+      // Signed in but not (yet) entitled on a stale check, e.g. just after checkout: re-check before showing the landing page.
+      if (!u.ent && !u.entFresh && !isApi && request.method === 'GET' && pathname === '/') {
+        const r = new URL('/api/account/refresh', request.url); r.searchParams.set('next', '/');
+        return NextResponse.redirect(r);
+      }
       if (isApi && !(request.cookies.get(DEMO_COOKIE))) return noindex(NextResponse.json({ error: 'An active plan is required', upsell: '/pricing' }, { status: 402 }));
     }
   }
@@ -108,7 +113,7 @@ export async function middleware(request: NextRequest) {
     }
     // Demo visitors may create share snapshots (POST only; the route has its own per-IP limit).
     if (request.method === 'POST' && pathname === '/api/share') return noindex(NextResponse.next());
-    if (pathname.startsWith('/api/')) return noindex(NextResponse.json({ error: 'Available in the full version', upsell: '/#waitlist' }, { status: 402 }));
+    if (pathname.startsWith('/api/')) return noindex(NextResponse.json({ error: 'Available in the full version', upsell: '/pricing' }, { status: 402 }));
   }
   if (IS_COMMERCIAL && pathname === '/') return NextResponse.rewrite(new URL('/welcome', request.url));
 
