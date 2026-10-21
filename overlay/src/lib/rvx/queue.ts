@@ -414,9 +414,13 @@ async function changed() {
 /** 44 — markets overlay pins. */
 async function markets() {
   const d = await selfJson('/api/markets', 30000);
-  const quotes = d.quotes || d.items || d.markets || [];
-  const list = Array.isArray(quotes) ? quotes : Object.values(quotes);
-  const out = list.filter((q: any) => q && q.price != null).map((q: any) => {
+  const list: any[] = [];
+  for (const g of ['indices', 'stocks', 'oil', 'commodities', 'crypto', 'fx']) {
+    const block = d[g];
+    if (!block || typeof block !== 'object') continue;
+    for (const q of Object.values(block) as any[]) if (q && q.price != null) list.push(q);
+  }
+  const out = list.map((q: any) => {
     const pin = MKT_PIN[q.group] || MKT_PIN.indices;
     const h = [...String(q.symbol)].reduce((a, c) => a + c.charCodeAt(0), 0);
     return pt(pin.lng + ((h % 20) - 10) * 0.02, pin.lat + ((h % 17) - 8) * 0.015, {
