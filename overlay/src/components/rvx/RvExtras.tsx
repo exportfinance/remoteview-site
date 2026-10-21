@@ -97,7 +97,7 @@ export default function RvExtras() {
     if (h.get('gd')) setGibsDate(h.get('gd')!);
     if (h.get('globe') === '1') setGlobe(true);
     const v = h.get('v');
-    if (v) { const [lng, lat, z] = v.split(',').map(Number); const t = setInterval(() => { const m = getMap(); if (m) { clearInterval(t); m.jumpTo({ center: [lng, lat], zoom: z }); } }, 500); }
+    if (v) { const [lng, lat, z] = v.split(',').map(Number); let tries = 0; const t = setInterval(() => { const m = getMap(); if (m && m.isStyleLoaded?.()) { tries++; m.jumpTo({ center: [lng, lat], zoom: z }); if (tries >= 3) clearInterval(t); } }, 2500); }
     if (h.get('open') === '1') setOpen(true);
   }, []);
   const shareUrl = useCallback(() => {
