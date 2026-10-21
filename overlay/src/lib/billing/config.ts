@@ -3,8 +3,8 @@
 export type PlanId = 'personal' | 'pro';
 export type Interval = 'month' | 'year';
 export const PLANS: Record<PlanId, { name: string; month: number; year: number; blurb: string }> = {
-  personal: { name: 'Personal', month: 34.99, year: 349, blurb: 'For individual researchers, spotters and analysts.' },
-  pro: { name: 'Pro', month: 99, year: 990, blurb: 'Every layer, AI briefings, PDF reports, case files and link graphs.' },
+  personal: { name: 'Personal', month: 19.99, year: 199, blurb: 'For individual researchers, spotters and analysts.' },
+  pro: { name: 'Pro', month: 49.5, year: 495, blurb: 'Every layer, AI briefings, PDF reports, case files and link graphs.' },
 };
 export const TRIAL_DAYS = 7;
 export const FOUNDER_LIMIT = 500;

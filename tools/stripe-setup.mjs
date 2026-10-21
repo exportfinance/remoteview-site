@@ -13,8 +13,8 @@ const stripe = new Stripe(key, opts);
 const live = /_live_/.test(key);
 
 const PRODUCTS = [
-  { id: 'rv_personal', name: 'RemoteView Personal', prices: [['rv_personal_monthly', 3499, 'month'], ['rv_personal_yearly', 34900, 'year']] },
-  { id: 'rv_pro', name: 'RemoteView Pro', prices: [['rv_pro_monthly', 9900, 'month'], ['rv_pro_yearly', 99000, 'year']] },
+  { id: 'rv_personal', name: 'RemoteView Personal', prices: [['rv_personal_monthly', 1999, 'month'], ['rv_personal_yearly', 19900, 'year']] },
+  { id: 'rv_pro', name: 'RemoteView Pro', prices: [['rv_pro_monthly', 4950, 'month'], ['rv_pro_yearly', 49500, 'year']] },
 ];
 const COUPON = { id: 'rv-founder-50', name: 'Founder: 50% off for life', percent_off: 50, duration: 'forever', max_redemptions: 500 };
 
