@@ -3,7 +3,7 @@
 export type PlanId = 'personal' | 'pro';
 export type Interval = 'month' | 'year';
 export const PLANS: Record<PlanId, { name: string; month: number; year: number; blurb: string }> = {
-  personal: { name: 'Personal', month: 19.99, year: 199, blurb: 'For individual researchers, spotters and analysts.' },
+  personal: { name: 'Personal', month: 19.99, year: 199, blurb: 'For individual researchers, analysts and journalists.' },
   pro: { name: 'Pro', month: 49.5, year: 495, blurb: 'Every layer, AI briefings, PDF reports, case files and link graphs.' },
 };
 export const TRIAL_DAYS = 7;

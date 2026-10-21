@@ -1,5 +1,6 @@
 /* /live/[topic] snapshots — commercially-fine sources only, cached hourly. */
 import { cached, getJson } from '@/lib/rvx/util';
+import { HANDLERS } from '@/lib/rvx/feeds';
 
 const HOUR = 3600_000;
 export type Row = Record<string, string | number | null>;
@@ -7,14 +8,21 @@ export type Snapshot = {
   headline: string; stat: string | null; statLabel: string; rows: Row[]; cols: [string, string][];
   points: [number, number][]; bbox: [number, number, number, number]; source: string; sourceUrl: string; fetched: string; note?: string;
 };
-export type Topic = { slug: string; title: string; h1: string; desc: string; kind: 'adsb-mil-eu' | 'adsb-taiwan' | 'aurora' | 'chokepoints' | 'uap'; demoLayers: string };
+export type Topic = { slug: string; title: string; h1: string; desc: string; kind: 'adsb-mil-eu' | 'adsb-taiwan' | 'aurora' | 'chokepoints' | 'uap' | 'unrest' | 'outages' | 'quakes' | 'choke'; demoLayers: string; choke?: string; group?: string };
 
 export const TOPICS: Topic[] = [
+  { slug: 'conflict-and-unrest-today', title: 'Conflict and unrest today: live world map', h1: 'Conflict and unrest, today', desc: 'Conflict-related events, protests and unrest reported around the world in the last day, from the GDELT 2.0 event database, by country. Updated hourly.', kind: 'unrest', demoLayers: '', group: 'Conflict' },
+  { slug: 'internet-outages-today', title: 'Internet outages today: live country map', h1: 'Internet outages, today', desc: 'Countries with internet outage alerts in the last 24 hours, from IODA (Georgia Tech) BGP, active probing and telescope signals. Updated hourly.', kind: 'outages', demoLayers: '', group: 'Infrastructure' },
+  { slug: 'red-sea-shipping', title: 'Red Sea and Bab el-Mandeb shipping today', h1: 'Red Sea shipping, live', desc: 'Ships transiting the Bab el-Mandeb strait at the mouth of the Red Sea, with the share moving slowly or waiting, from live AIS. Updated hourly.', kind: 'choke', choke: 'bab', demoLayers: '', group: 'Shipping' },
+  { slug: 'suez-canal-shipping', title: 'Suez Canal shipping today: live traffic', h1: 'Suez Canal shipping, live', desc: 'Vessels in and around the Suez Canal right now, with tanker counts and the share moving slowly, from live AIS. Updated hourly.', kind: 'choke', choke: 'suez', demoLayers: '', group: 'Shipping' },
+  { slug: 'strait-of-hormuz-shipping', title: 'Strait of Hormuz shipping today: live tankers', h1: 'Strait of Hormuz shipping, live', desc: 'Tankers and other vessels in the Strait of Hormuz right now, from live AIS. Updated hourly.', kind: 'choke', choke: 'hormuz', demoLayers: '', group: 'Shipping' },
+  { slug: 'panama-canal-shipping', title: 'Panama Canal shipping today: live traffic', h1: 'Panama Canal shipping, live', desc: 'Vessels at the Panama Canal approaches right now, with the share waiting, from live AIS. Updated hourly.', kind: 'choke', choke: 'panama', demoLayers: '', group: 'Shipping' },
+  { slug: 'strait-of-malacca-shipping', title: 'Strait of Malacca shipping today: live traffic', h1: 'Strait of Malacca shipping, live', desc: 'Vessels transiting the Strait of Malacca right now, from live AIS. Updated hourly.', kind: 'choke', choke: 'malacca', demoLayers: '', group: 'Shipping' },
+  { slug: 'busiest-shipping-chokepoints', title: 'The world’s busiest shipping chokepoints — map', h1: 'The world’s shipping chokepoints', desc: 'The maritime chokepoints that most global seaborne trade passes through, mapped. Live vessel tracking is in the full app.', kind: 'chokepoints', demoLayers: 'flights' },
+  { slug: 'earthquakes-today', title: 'Earthquakes today: live world map (M4.5+)', h1: 'Earthquakes today', desc: 'Every magnitude 4.5+ earthquake in the last 24 hours from the USGS real-time feed, mapped. Updated hourly.', kind: 'quakes', demoLayers: '', group: 'Disasters' },
+  { slug: 'aurora-forecast', title: 'Aurora forecast tonight — live Kp index', h1: 'Aurora forecast, live', desc: 'Planetary Kp index and the 30-minute OVATION aurora forecast from NOAA’s Space Weather Prediction Center. Updated hourly.', kind: 'aurora', demoLayers: 'day_night' },
   { slug: 'military-aircraft-over-europe', title: 'Military aircraft over Europe — live map', h1: 'Military aircraft over Europe, live', desc: 'Military and government aircraft currently broadcasting ADS-B over Europe, from the open adsb.lol network. Updated hourly.', kind: 'adsb-mil-eu', demoLayers: 'flights,military' },
   { slug: 'flights-over-taiwan', title: 'Flights over Taiwan — live air traffic', h1: 'Flights over Taiwan, live', desc: 'Aircraft currently broadcasting ADS-B within ~250 nautical miles of Taiwan, from the open adsb.lol network. Updated hourly.', kind: 'adsb-taiwan', demoLayers: 'flights,military' },
-  { slug: 'aurora-forecast', title: 'Aurora forecast tonight — live Kp index', h1: 'Aurora forecast, live', desc: 'Planetary Kp index and the 30-minute OVATION aurora forecast from NOAA’s Space Weather Prediction Center. Updated hourly.', kind: 'aurora', demoLayers: 'day_night' },
-  { slug: 'busiest-shipping-chokepoints', title: 'The world’s busiest shipping chokepoints — map', h1: 'The world’s shipping chokepoints', desc: 'The maritime chokepoints that most global seaborne trade passes through, mapped. Live vessel tracking is in the full app.', kind: 'chokepoints', demoLayers: 'flights' },
-  { slug: 'ufo-sightings-map', title: 'UFO / UAP sightings map — sources and how to check them', h1: 'UFO and UAP sightings: what you can actually check', desc: 'Where public UAP reports come from, which official sources exist, and how to check a sighting against live aircraft and satellites.', kind: 'uap', demoLayers: 'flights,satellites' },
 ];
 export const topicBySlug = (s: string) => TOPICS.find((t) => t.slug === s) || null;
 
@@ -40,6 +48,31 @@ export const CHOKEPOINTS: { name: string; lat: number; lng: number; links: strin
 export async function snapshot(t: Topic): Promise<Snapshot> {
   return cached('seo-live-' + t.slug, HOUR, async () => {
     const fetched = new Date().toISOString();
+    if (t.kind === 'unrest') {
+      const d: any = await HANDLERS.protests(new URLSearchParams());
+      const f = d.features || []; const by = new Map<string, number>();
+      for (const e of f) { const c = e.properties?.country || 'Unknown'; by.set(c, (by.get(c) || 0) + 1); }
+      const rows = [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25).map(([country, n]) => ({ country, events: n }));
+      return { headline: 'Reported conflict and unrest events by country', stat: String(f.length), statLabel: 'events in the latest GDELT window', rows, cols: [['country', 'Country'], ['events', 'Events']], points: f.map((e: any) => e.geometry.coordinates), bbox: [-180, -60, 180, 75], source: 'GDELT Project 2.0 (open)', sourceUrl: 'https://www.gdeltproject.org', fetched, note: 'GDELT codes news reports automatically, so counts are an estimate of reported activity, not verified incidents.' };
+    }
+    if (t.kind === 'outages') {
+      const d: any = await HANDLERS.ioda(new URLSearchParams());
+      const rows = (d.countries || []).slice(0, 30).map((c: any) => ({ country: c.name, critical: c.critical, warning: c.warning, last: String(c.last).slice(0, 16).replace('T', ' ') + ' UTC' }));
+      return { headline: 'Countries with internet outage alerts, last 24h', stat: String((d.countries || []).length), statLabel: 'countries with alerts', rows, cols: [['country', 'Country'], ['critical', 'Critical'], ['warning', 'Warning'], ['last', 'Latest']], points: [], bbox: [-180, -60, 180, 75], source: 'IODA, Georgia Tech (open)', sourceUrl: 'https://ioda.inetintel.cc.gatech.edu', fetched, note: 'An alert means a signal dropped below normal; it can be a partial or local outage.' };
+    }
+    if (t.kind === 'choke') {
+      const d: any = await HANDLERS.chokepoints(new URLSearchParams());
+      const c = (d.chokepoints || []).find((x: any) => x.id === t.choke) || null;
+      const rows = c ? [{ k: 'Vessels in area (last 30 min)', v: c.total }, { k: 'Moving under 1 knot', v: c.waiting_or_slow }, { k: 'Tankers', v: c.tankers }, { k: 'Slow-ship share (estimate)', v: c.delay_index == null ? '—' : c.delay_index + '%' }] : [];
+      const [a, b, cc, dd] = c?.bbox || [0, 0, 1, 1]; const pad = 4;
+      return { headline: c ? c.name + ' traffic now' : 'Chokepoint traffic', stat: c ? String(c.total) : null, statLabel: 'vessels seen in the last 30 minutes', rows, cols: [['k', 'Measure'], ['v', 'Now']], points: c ? [[(a + cc) / 2, (b + dd) / 2]] : [], bbox: [a - pad, b - pad, cc + pad, dd + pad], source: 'AIS via aisstream.io (derived)', sourceUrl: 'https://aisstream.io', fetched, note: 'AIS coverage varies and some ships switch transponders off, so counts are estimates. Zero can mean the live feed has only just started.' };
+    }
+    if (t.kind === 'quakes') {
+      const d: any = await getJson('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson', { timeout: 15000 });
+      const f = d.features || [];
+      const rows = f.slice(0, 30).map((e: any) => ({ mag: 'M' + Number(e.properties.mag).toFixed(1), place: e.properties.place, time: new Date(e.properties.time).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' }));
+      return { headline: 'M4.5+ earthquakes, last 24 hours', stat: String(f.length), statLabel: 'earthquakes M4.5+ in 24h', rows, cols: [['mag', 'Mag'], ['place', 'Where'], ['time', 'Time']], points: f.map((e: any) => e.geometry.coordinates.slice(0, 2)), bbox: [-180, -60, 180, 75], source: 'USGS Earthquake Hazards Program (public domain)', sourceUrl: 'https://earthquake.usgs.gov', fetched };
+    }
     if (t.kind === 'adsb-mil-eu') {
       const d: any = await adsbLol('/v2/mil');
       const ac = (d.ac || []).filter((a: any) => a.lat >= 34 && a.lat <= 72 && a.lon >= -25 && a.lon <= 45);

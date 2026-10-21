@@ -19,7 +19,7 @@ function grab(map: any): Promise<string | null> {
         for (const [px, py, dx, dy] of [[16, 16, 1, 1], [W - 16, 16, -1, 1], [16, H - 16, 1, -1], [W - 16, H - 16, -1, -1]]) { x.beginPath(); x.moveTo(px, py + dy * L); x.lineTo(px, py); x.lineTo(px + dx * L, py); x.stroke(); }
         x.fillStyle = 'rgba(3,9,18,.72)'; x.fillRect(0, H - 64, W, 64);
         x.fillStyle = '#2DD4BF'; x.font = '600 26px ui-monospace, monospace'; x.fillText('REMOTEVIEW', 40, H - 23);
-        x.fillStyle = '#c9d8e8'; x.font = '22px ui-sans-serif, system-ui, sans-serif'; x.fillText('The whole world, live, in one screen', 250, H - 24);
+        x.fillStyle = '#c9d8e8'; x.font = '22px ui-sans-serif, system-ui, sans-serif'; x.fillText('Critical world events, as they happen.', 250, H - 24);
         let q = 0.78, out = c.toDataURL('image/jpeg', q);
         while (out.length > 560_000 && q > 0.4) { q -= 0.12; out = c.toDataURL('image/jpeg', q); }
         finish(out.length > 600_000 ? null : out);
