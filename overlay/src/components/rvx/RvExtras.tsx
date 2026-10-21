@@ -525,6 +525,31 @@ function KV({ o }: { o: Record<string, string> }) {
   return <>{Object.entries(o || {}).map(([k, v]) => <div key={k} style={{ fontSize: 11, marginBottom: 3 }}><span style={{ color: '#7f97b2' }}>{k}:</span> {v}</div>)}</>;
 }
 const yn = (b: boolean) => <span style={{ color: b ? '#22C55E' : '#EF4444' }}>{b ? 'yes' : 'no'}</span>;
+const fmtN = (v: number) => Math.abs(v) >= 1e9 ? (v / 1e9).toFixed(1) + ' bn' : Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + ' m' : Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : (+v).toFixed(2);
+function CountryIntel({ it }: { it: any }) {
+  const f = it.fcdo, w = it.worldbank, m = it.imf;
+  return (
+    <div>
+      <div style={{ color: TEAL, fontSize: 11, margin: '10px 0 4px' }}>COUNTRY INTELLIGENCE</div>
+      {f && !f.error && <div style={{ marginBottom: 6 }}>
+        <div style={{ color: '#e6f1ff' }}>FCDO travel advice</div>
+        {f.alerts.length ? f.alerts.map((a: string, i: number) => <div key={i} style={{ fontSize: 11, color: f.level >= 3 ? '#F87171' : '#FBBF24' }}>⚠ {a}</div>) : <div style={{ fontSize: 11 }}>No FCDO travel warnings against travel.</div>}
+        <div style={{ fontSize: 10, color: '#4b6a88' }}>Updated {f.updated?.slice(0, 10)} · <a href={f.url} target="_blank" rel="noopener" style={{ color: TEAL }}>gov.uk</a></div>
+      </div>}
+      {w && !w.error && <div style={{ marginBottom: 6 }}>
+        <div style={{ color: '#e6f1ff' }}>World Bank</div>
+        {w.indicators.map((x: any) => <div key={x.id} style={{ fontSize: 11 }}><span style={{ color: '#7f97b2' }}>{x.label}:</span> {fmtN(x.value)} ({x.year})</div>)}
+        {w.wgi.length > 0 && <div style={{ fontSize: 11, marginTop: 3 }}><span style={{ color: '#7f97b2' }}>Governance (WGI, -2.5..2.5):</span> {w.wgi.map((x: any) => `${x.label} ${(+x.value).toFixed(2)}`).join(' · ')} ({w.wgi[0].year})</div>}
+        <div style={{ fontSize: 10, color: '#4b6a88' }}><a href={w.url} target="_blank" rel="noopener" style={{ color: TEAL }}>data.worldbank.org</a></div>
+      </div>}
+      {m && !m.error && m.rows.length > 0 && <div style={{ marginBottom: 6 }}>
+        <div style={{ color: '#e6f1ff' }}>IMF WEO (projections marked *)</div>
+        {m.rows.map((r: any) => <div key={r.id} style={{ fontSize: 11 }}><span style={{ color: '#7f97b2' }}>{r.label}:</span> {r.values.map((v: any) => `${v.year}${v.forecast ? '*' : ''} ${v.value ?? '—'}`).join(' · ')}</div>)}
+        <div style={{ fontSize: 10, color: '#4b6a88' }}><a href={m.url} target="_blank" rel="noopener" style={{ color: TEAL }}>imf.org DataMapper</a></div>
+      </div>}
+    </div>
+  );
+}
 function Dossier({ d }: { d: any }) {
   if (!d.country) return <div style={{ marginTop: 6 }}>No country at that point (sea or unlisted territory).</div>;
   const fb = d.factbook; const uk = d.ukef; const ex = d.exim;
@@ -547,6 +572,7 @@ function Dossier({ d }: { d: any }) {
           <div style={{ fontSize: 10, color: '#4b6a88', marginTop: 4 }}>CLS as of {ex?.asOf} · <a href={ex?.pdf || ex?.url} target="_blank" rel="noopener" style={{ color: TEAL }}>exim.gov</a></div>
         </div>
       </div>
+      {d.intel && <CountryIntel it={d.intel} />}
       <div style={{ color: TEAL, fontSize: 11, margin: '10px 0 4px' }}>CIA WORLD FACTBOOK</div>
       {fb?.available ? <>
         <div style={{ fontSize: 10, color: '#fbbf24', marginBottom: 4 }}>Final edition — data as of {fb.asOf?.slice(0, 10)}. The CIA discontinued the Factbook on 4 Feb 2026.</div>

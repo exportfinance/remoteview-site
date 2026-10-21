@@ -11,7 +11,7 @@ const strip = (h: string) => h.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').
 export const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^the\s+|,?\s*the$/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
 /* ── Countries (Natural Earth 1:110m, public domain) ───────── */
-type NE = { name: string; long: string; iso2: string; fips: string; bbox: number[]; geom: any };
+type NE = { name: string; long: string; iso2: string; iso3: string; fips: string; bbox: number[]; geom: any };
 export async function countries(): Promise<{ list: NE[]; geo: any }> {
   return cached('ne110', 7 * DAY, async () => {
     const d = await getJson('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson', { timeout: 30000 });
@@ -22,7 +22,7 @@ export async function countries(): Promise<{ list: NE[]; geo: any }> {
       let a = 180, b = 90, c = -180, e = -90;
       for (const poly of polys) for (const [x, y] of poly[0]) { a = Math.min(a, x); b = Math.min(b, y); c = Math.max(c, x); e = Math.max(e, y); }
       const iso2 = p.ISO_A2_EH && p.ISO_A2_EH !== '-99' ? p.ISO_A2_EH : p.ISO_A2;
-      list.push({ name: p.NAME, long: p.NAME_LONG, iso2, fips: p.FIPS_10, bbox: [a, b, c, e], geom: polys });
+      list.push({ name: p.NAME, long: p.NAME_LONG, iso2, iso3: p.ISO_A3_EH && p.ISO_A3_EH !== '-99' ? p.ISO_A3_EH : p.ADM0_A3, fips: p.FIPS_10, bbox: [a, b, c, e], geom: polys });
       feats.push({ type: 'Feature', geometry: g, properties: { name: p.NAME, iso2 } });
     }
     return { list, geo: { type: 'FeatureCollection', features: feats } };
@@ -196,11 +196,13 @@ export async function coverLayer(which: 'ukef' | 'exim') {
 export async function dossier(lng: number, lat: number) {
   const c = await countryAt(lng, lat);
   if (!c) return { country: null };
-  const [fb, uk, ex] = await Promise.allSettled([factbook(c.fips, c.iso2), ukefAll(), eximAll()]);
+  const { intel } = await import('./intel');
+  const [fb, uk, ex, it] = await Promise.allSettled([factbook(c.fips, c.iso2), ukefAll(), eximAll(), intel(c)]);
   const ukv = uk.status === 'fulfilled' ? uk.value : null; const exv = ex.status === 'fulfilled' ? ex.value : null;
   const exRow = exv ? matchName(exv.rows, c.name, c.long) : undefined;
   return {
-    country: { name: c.long || c.name, iso2: c.iso2 },
+    country: { name: c.long || c.name, iso2: c.iso2, iso3: c.iso3 },
+    intel: it.status === 'fulfilled' ? it.value : { error: (it.reason as Error)?.message },
     factbook: fb.status === 'fulfilled' ? fb.value : { available: false, reason: (fb.reason as Error).message },
     ukef: ukv ? { row: matchName(ukv.rows, c.name, c.long) || null, updated: ukv.updated, url: ukv.url, note: ukv.note } : { error: (uk as PromiseRejectedResult).reason?.message },
     exim: exv ? { row: exRow || null, footnotes: exRow ? Object.fromEntries(exRow.notes.map((n) => [n, exv.footnotes[n] || ''])) : {}, asOf: exv.asOf, url: exv.url, pdf: exv.pdf, note: exv.note } : { error: (ex as PromiseRejectedResult).reason?.message },
