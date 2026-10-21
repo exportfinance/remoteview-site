@@ -8,8 +8,8 @@ export default async function Countries() {
   const all = await countryList().catch(() => []);
   return (
     <SeoShell jsonLd={{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Countries', url: PUBLIC_URL + '/country' }}>
-      <div className="hud-kick">// COUNTRY INDEX · {all.length} FILES</div>
-      <h1>Every country, one dossier each</h1>
+      <div className="hud-kick">// COUNTRY INDEX · {all.length} COUNTRIES</div>
+      <h1>Every country, one live brief each</h1>
       <p className="hud-sub">Risk score, travel advisories, governance indicators and election dates from official and open sources.</p>
       <div className="hud-links">{all.map((c) => <a key={c.slug} href={`/country/${c.slug}`}>{c.name}</a>)}</div>
       <Cta />

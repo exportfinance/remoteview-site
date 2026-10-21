@@ -12,7 +12,7 @@ export default async function Og({ params }: { params: Promise<{ slug: string }>
   return new ImageResponse(
     <div style={{ width: '100%', height: '100%', display: 'flex', background: '#030912', color: '#e6f1ff', padding: 64, fontFamily: 'sans-serif', backgroundImage: 'linear-gradient(rgba(45,212,191,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(45,212,191,.08) 1px, transparent 1px)', backgroundSize: '60px 60px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <div style={{ display: 'flex', fontSize: 24, letterSpacing: 8, color: '#2DD4BF' }}>REMOTEVIEW · COUNTRY DOSSIER</div>
+        <div style={{ display: 'flex', fontSize: 24, letterSpacing: 8, color: '#2DD4BF' }}>REMOTEVIEW · COUNTRY BRIEF</div>
         <div style={{ display: 'flex', fontSize: 84, fontWeight: 700, marginTop: 30, lineHeight: 1 }}>{c?.name || 'Country'}</div>
         {band && d?.risk ? <div style={{ display: 'flex', alignItems: 'baseline', marginTop: 40 }}><div style={{ display: 'flex', fontSize: 150, fontWeight: 700, color: band[1], lineHeight: 1 }}>{d.risk.score}</div><div style={{ display: 'flex', fontSize: 40, color: '#8ba3bd', marginLeft: 12 }}>{`/100 · ${band[0]}`}</div></div> : <div style={{ display: 'flex', fontSize: 36, color: '#8ba3bd', marginTop: 40 }}>Risk, travel advice and key data</div>}
         <div style={{ display: 'flex', fontSize: 26, color: '#8ba3bd', marginTop: 'auto' }}>Composite risk · travel advisories · governance · live map</div>

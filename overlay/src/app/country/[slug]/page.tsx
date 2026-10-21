@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params; const c = await countryBySlug(slug).catch(() => null);
   if (!c) return { title: 'Country not found · RemoteView', robots: { index: false } };
-  const title = `${c.name} risk score, travel advisories & key data | RemoteView`;
+  const title = `${c.name} risk today: live conflict, outages and alerts`;
   const description = `${c.name}: composite country risk score, US and UK travel advisory levels, World Bank governance indicators, population, GDP and election dates — on one live map.`;
   const url = `${PUBLIC_URL}/country/${c.slug}`;
   return { title, description, robots: { index: true, follow: true }, alternates: { canonical: url }, openGraph: { title, description, url, type: 'article', siteName: 'RemoteView' }, twitter: { card: 'summary_large_image', title, description } };
@@ -34,14 +34,14 @@ export default async function CountryPage({ params }: { params: Promise<{ slug: 
   ];
   return (
     <SeoShell jsonLd={jsonLd}>
-      <div className="hud-kick">// COUNTRY DOSSIER · {c.iso3}</div>
+      <div className="hud-kick">// COUNTRY BRIEF · {c.iso3}</div>
       <h1>{c.name}</h1>
       <p className="hud-sub">Risk score, travel advice, governance and the basics for {c.long || c.name}, from official and open sources. Refreshed daily.</p>
       <div className="hud-grid hud-g2">
-        <div className="hud-card" data-file="FILE // RISK">
+        <div className="hud-card" data-file="Risk">
           {d.risk && band ? <>
             <div className="hud-big" style={{ color: band[1] }}>{d.risk.score}<span style={{ fontSize: 18, color: '#8ba3bd' }}>/100</span></div>
-            <div className="hud-lbl">{band[0]} composite risk · OECD 40% + US State 35% + UK FCDO 25%. Not a credit rating.</div>
+            <div className="hud-lbl"><b style={{ color: '#fde68a' }}>Estimate.</b> {band[0]} composite risk · OECD 40% + US State 35% + UK FCDO 25%. Not a credit rating.</div>
             <table className="hud-t" style={{ marginTop: 14 }}><tbody>
               <tr><td>OECD country risk</td><td>{p.oecd_label || '—'}</td></tr>
               <tr><td>US State Dept advisory</td><td>{p.state != null ? `Level ${p.state}` : '—'}{p.state_label ? ` · ${p.state_label}` : ''}</td></tr>
@@ -49,21 +49,21 @@ export default async function CountryPage({ params }: { params: Promise<{ slug: 
             </tbody></table>
           </> : <p className="hud-lbl">No composite score: this country is not covered by all three source lists.</p>}
         </div>
-        <div className="hud-card" data-file="FILE // MAP">
+        <div className="hud-card" data-file="Map">
           <svg className="hud-map" viewBox="0 0 320 200" role="img" aria-label={`Outline map of ${c.name}`}><path className="hl hud-tgt" d={outlinePath(c)} /></svg>
           <div className="hud-lbl" style={{ marginTop: 8 }}>Outline: Natural Earth (public domain).</div>
         </div>
       </div>
       <div className="hud-grid" style={{ marginTop: 14 }}>
-        <div className="hud-card" data-file="FILE // ECONOMY">
+        <div className="hud-card" data-file="Economy">
           <table className="hud-t"><tbody>{d.wdi.map((r) => <tr key={r.code}><td>{r.label}</td><td className="hud-mono">{fmtNum(r.value, r.code)}{r.year ? <span className="hud-lbl"> ({r.year})</span> : null}</td></tr>)}</tbody></table>
           {!d.wdi.length && <p className="hud-lbl">World Bank data unavailable right now.</p>}
         </div>
-        <div className="hud-card" data-file="FILE // GOVERNANCE">
+        <div className="hud-card" data-file="Governance">
           <table className="hud-t"><tbody>{d.wgi.map((r) => <tr key={r.code}><td>{r.label}</td><td className="hud-mono">{fmtNum(r.value, r.code)}</td></tr>)}</tbody></table>
-          <p className="hud-lbl" style={{ marginTop: 8 }}>World Governance Indicators, roughly −2.5 (weak) to +2.5 (strong){d.wgi[0]?.year ? `, ${d.wgi[0].year}` : ''}.</p>
+          <p className="hud-lbl" style={{ marginTop: 8 }}>World Bank Worldwide Governance Indicators, roughly −2.5 (weak) to +2.5 (strong){d.wgi[0]?.year ? `, ${d.wgi[0].year} release` : ''}. The 2024 WGI revision re-estimated the whole series, so values differ from older editions.</p>
         </div>
-        <div className="hud-card" data-file="FILE // ELECTIONS">
+        <div className="hud-card" data-file="Elections">
           {fb?.elections && Object.keys(fb.elections).length ? <table className="hud-t"><tbody>
             {fb.elections['most recent election date'] && <tr><td>Most recent</td><td>{fb.elections['most recent election date']}</td></tr>}
             {fb.elections['expected date of next election'] && <tr><td>Next expected</td><td>{fb.elections['expected date of next election']}</td></tr>}
@@ -72,7 +72,7 @@ export default async function CountryPage({ params }: { params: Promise<{ slug: 
           {fb?.government?.Capital && <p className="hud-lbl">Capital: {fb.government.Capital.split(';')[0].replace(/^name: /, '')}</p>}
         </div>
       </div>
-      <Cta title={`Watch ${c.name} live`} sub="Live flights, satellites, quakes, weather and this risk score on the 3D globe." />
+      <Cta title={`Track what is happening in ${c.name} now`} sub="Conflict signals, internet outages, shipping chokepoints, country risk and breaking disasters on one live map." />
       <h2>Embed this card</h2>
       <p className="hud-lbl">Free to embed with the credit link intact:</p>
       <pre className="hud-mono" style={{ whiteSpace: 'pre-wrap', fontSize: 12, padding: 12, border: '1px solid rgba(45,212,191,.18)', borderRadius: 4, color: '#9fb3c8' }}>{`<iframe src="${PUBLIC_URL}/embed/country/${c.slug}" width="360" height="260" style="border:0" loading="lazy" title="${c.name} risk — RemoteView"></iframe>`}</pre>
