@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { IS_COMMERCIAL } from '@/lib/edition';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
@@ -81,7 +82,7 @@ export default function GlobalStatusBar({ revealed = true }: { revealed?: boolea
     const fetchData = async () => {
       try {
         const [cryptoRes, quakeRes] = await Promise.allSettled([
-          fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true')
+          IS_COMMERCIAL ? Promise.reject('crypto ticker not in this edition') : fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true')
             .then(res => res.ok ? res.json() : Promise.reject('CoinGecko error'))
             .then(data => {
               const prices: CryptoPrice[] = [];
