@@ -18,7 +18,11 @@ export async function countryNow(c: CountryRow): Promise<Now> {
   if (pr.status === 'fulfilled') {
     const f = (pr.value.features || []).filter((e: any) => e.properties?.country && e.properties.country === c.fips);
     unrest = f.length; protests = f.filter((e: any) => e.properties.kind === 'protest').length;
-    for (const e of f.sort((a: any, b: any) => (b.properties.articles || 0) - (a.properties.articles || 0)).slice(0, 5)) top.push({ name: String(e.properties.name || 'Unnamed location'), url: e.properties.url });
+    const seen = new Set<string>();
+    for (const e of f.sort((a: any, b: any) => (b.properties.articles || 0) - (a.properties.articles || 0))) {
+      const name = String(e.properties.name || 'Unnamed location').trim(); const key = name.toLowerCase().replace(/\s+/g, ' ');
+      if (seen.has(key)) continue; seen.add(key); top.push({ name, url: e.properties.url }); if (top.length >= 5) break;
+    }
   }
   const nm = c.name.toLowerCase();
   const quakesIn = qk.status === 'fulfilled' ? (qk.value.features || []).filter((e: any) => String(e.properties?.place || '').toLowerCase().endsWith(nm)).slice(0, 8)

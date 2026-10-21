@@ -5,8 +5,8 @@ import { countryBySlug, countryData, countryList, outlinePath, riskBand, fmtNum 
 import { PUBLIC_URL } from '@/lib/publicUrl';
 import { countryNow, nowSummary } from '@/lib/seo/now';
 
-/* Rendered on request; the sources behind it are cached in memory (risk 12h, World Bank / Factbook 7d). */
-export const dynamic = 'force-dynamic';
+/* Incremental static regeneration: the live figures are rebuilt at most every 5 minutes, so visitors get a cached page. */
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params; const c = await countryBySlug(slug).catch(() => null);
