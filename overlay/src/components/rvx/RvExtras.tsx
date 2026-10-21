@@ -53,6 +53,14 @@ export const LAYERS: Layer[] = [
   { id: 'cover-ukef', label: 'UKEF cover status', group: 'Export credit', kind: 'geojson', url: '/api/rvx/cover-ukef', style: 'fill', colorExpr: ['match', ['get', 'status'], 'on', '#22C55E', 'partial', '#EAB308', 'off', '#EF4444', 'contact', '#60A5FA', 'rgba(0,0,0,0)'] },
   { id: 'cover-exim', label: 'US EXIM cover status', group: 'Export credit', kind: 'geojson', url: '/api/rvx/cover-exim', style: 'fill', colorExpr: ['match', ['get', 'status'], 'on', '#22C55E', 'partial', '#EAB308', 'off', '#EF4444', 'rgba(0,0,0,0)'] },
   { id: 'ufo', label: 'UFO reports (unverified, NUFORC)', group: 'Curiosities', kind: 'geojson', url: '/data/ufo/index.json', style: 'cluster', color: '#C084FC' },
+  { id: 'jets', label: 'Notable private jets', group: 'Aviation', kind: 'geojson', url: '/api/rvx/jets', refreshMs: 60000, style: 'circle', color: '#E879F9', radius: 5 },
+  { id: 'elections', label: 'Elections 2026 + coup-watch', group: 'Security', kind: 'geojson', url: '/api/rvx/elections', style: 'circle', colorExpr: ['match', ['get', 'kind'], 'election', '#38BDF8', 'referendum', '#A78BFA', 'coup_watch', '#EF4444', '#94A3B8'], radius: 6 },
+  { id: 'chokepoint-map', label: 'Shipping chokepoints', group: 'Maritime', kind: 'geojson', url: '/api/rvx/chokepoint-map', refreshMs: 120000, style: 'circle', color: '#F97316', radius: 8 },
+  { id: 'commodity', label: 'Commodity ships (tanker/LNG/cargo)', group: 'Maritime', kind: 'geojson', url: '/api/rvx/commodity', refreshMs: 60000, style: 'circle', colorExpr: ['match', ['get', 'kind'], 'tanker', '#F97316', 'lng', '#22D3EE', 'cargo', '#A3E635', '#94A3B8'], radius: 3 },
+  { id: 'markets', label: 'Markets overlay', group: 'Economy', kind: 'geojson', url: '/api/rvx/markets', refreshMs: 300000, style: 'circle', colorExpr: ['case', ['get', 'up'], '#22C55E', '#EF4444'], radius: 6 },
+  { id: 'refugees', label: 'Refugees by asylum country (OWID)', group: 'Humanitarian', kind: 'geojson', url: '/api/rvx/refugees', style: 'fill', colorExpr: ['case', ['<', ['get', 'v'], 0], 'rgba(0,0,0,0)', ['interpolate', ['linear'], ['get', 'v'], 0, '#FEF3C7', 50000, '#FBBF24', 500000, '#F97316', 2000000, '#DC2626']] },
+  { id: 'sanctions-map', label: 'OpenSanctions targets by country', group: 'Security', kind: 'geojson', url: '/api/rvx/sanctions-map', style: 'fill', colorExpr: ['case', ['<', ['get', 'v'], 0], 'rgba(0,0,0,0)', ['interpolate', ['linear'], ['get', 'v'], 0, '#DBEAFE', 100, '#60A5FA', 1000, '#F97316', 10000, '#DC2626']] },
+  { id: 'risk-score', label: 'Weekly country risk score (0-100)', group: 'Country risk', kind: 'geojson', url: '/api/rvx/risk-score', style: 'fill', colorExpr: ['case', ['<', ['get', 'v'], 0], 'rgba(0,0,0,0)', ['interpolate', ['linear'], ['get', 'v'], 0, '#22C55E', 35, '#EAB308', 60, '#F97316', 85, '#DC2626']] },
   { id: 'ships', label: 'Live ships (AIS)', group: 'Maritime', kind: 'geojson', url: '/api/rvx/ships', refreshMs: 60000, style: 'circle', colorExpr: ['match', ['get', 'kind'], 'tanker', '#F97316', 'lng', '#22D3EE', 'cargo', '#A3E635', 'passenger', '#E879F9', 'military', '#EF4444', '#94A3B8'], radius: 2.5 },
 ];
 
@@ -63,6 +71,7 @@ export const CONFIDENCE: Record<string, 'high' | 'medium' | 'low'> = {
   protests: 'low', anomalies: 'low', ships: 'medium', ufo: 'low', 'cover-ukef': 'high', 'cover-exim': 'high',
   'risk-oecd': 'high', 'adv-fcdo': 'high', 'adv-state': 'high', nws: 'high', sondes: 'high', fireballs: 'high',
   milsats: 'medium', amsats: 'medium', sdr: 'medium', embassies: 'medium', bases: 'medium', borders: 'medium', vipjets: 'low',
+  jets: 'low', elections: 'medium', 'chokepoint-map': 'medium', commodity: 'medium', markets: 'high', refugees: 'high', 'sanctions-map': 'high', 'risk-score': 'medium',
 };
 const CONF_COLOR = { high: '#22C55E', medium: '#EAB308', low: '#F97316' };
 
@@ -560,6 +569,8 @@ function Tools() {
   const [pickCode, setPickCode] = useState(''); const [dropRes, setDropRes] = useState<any>(null);
   const [sanq, setSanq] = useState(''); const [san, setSan] = useState<any>(null);
   const [epic, setEpic] = useState<any>(null); const [conj, setConj] = useState<any>(null); const [sw, setSw] = useState<any>(null); const [hf, setHf] = useState<any>(null);
+  const [changed, setChanged] = useState<any>(null); const [reportTxt, setReportTxt] = useState(''); const [etaQ, setEtaQ] = useState(''); const [eta, setEta] = useState<any>(null);
+  const [tcams, setTcams] = useState<any>(null); const [scan, setScan] = useState<any>(null); const [embed, setEmbed] = useState('');
   const run = async (k: string, f: () => Promise<void>) => { setBusy(k); try { await f(); } catch (e) { alert((e as Error).message); } setBusy(''); };
   const [dos, setDos] = useState<any>(null);
   return (
@@ -587,6 +598,50 @@ function Tools() {
         </div>}
       </Section>
 
+
+      <Section title="WHAT CHANGED (~24h)">
+        <button style={btn} onClick={() => run('chg2', async () => setChanged(await getJ('/api/rvx/changed')))}>{busy==='chg2'?'…':'Diff vs yesterday'}</button>
+        {changed && <div style={{ fontSize: 11, marginTop: 4 }}>{(changed.changes||[]).map((c:any,i:number)=><div key={i}>{c.kind}: {c.from!=null?`${c.from} → ${c.to}`:c.to}{c.delta!=null?` (${c.delta>=0?'+':''}${c.delta})`:''}</div>)}
+          <div style={{ color:'#7f97b2', marginTop:4 }}>{changed.meta?.note || changed.meta?.source}</div>
+          {(changed.top_now||[]).slice(0,3).map((e:any,i:number)=><div key={i} style={{ marginTop:2 }}>• {e.title}</div>)}
+        </div>}
+      </Section>
+      <Section title="OSINT PDF REPORT">
+        <button style={btn} onClick={() => run('pdf', async () => {
+          const p = await pick(); const r = await getJ(`/api/rvx/report?lat=${p.lat}&lng=${p.lng}`);
+          const bin = Uint8Array.from(atob(r.base64), c => c.charCodeAt(0));
+          const url = URL.createObjectURL(new Blob([bin], { type: 'application/pdf' }));
+          const a = document.createElement('a'); a.href=url; a.download=r.filename; a.click(); URL.revokeObjectURL(url);
+          setReportTxt(r.text);
+        })}>{picking?'Click…':busy==='pdf'?'…':'Pick country → PDF'}</button>
+        {reportTxt && <pre style={{ fontSize: 10, whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto', marginTop: 4 }}>{reportTxt}</pre>}
+      </Section>
+      <Section title="FLIGHT ETA">
+        <div style={{ display:'flex', gap:4 }}><input style={{...input, flex:1}} placeholder="hex or callsign" value={etaQ} onChange={e=>setEtaQ(e.target.value)} />
+          <button style={btn} onClick={() => run('eta', async () => { const q=/^[a-f0-9]{6}$/i.test(etaQ.trim())?`hex=${etaQ.trim()}`:`callsign=${encodeURIComponent(etaQ.trim())}`; setEta(await getJ(`/api/rvx/flight-eta?${q}`)); })}>{busy==='eta'?'…':'ETA'}</button></div>
+        {eta && <div style={{ fontSize:11, marginTop:4 }}>{eta.live?`${eta.live.callsign||eta.live.hex} @ ${eta.live.lat?.toFixed(2)},${eta.live.lng?.toFixed(2)}`:'not live'} → {eta.destination?.name||eta.destination?.iata||'dest?'}
+          {eta.eta && <div>ETA ~{eta.eta.eta_utc} ({eta.eta.distance_km} km, {eta.eta.method})</div>}
+          <div style={{ color:'#7f97b2' }}>{eta.meta?.source}</div>
+        </div>}
+      </Section>
+      <Section title="TRAFFIC CAMS NEAR POINT">
+        <button style={btn} onClick={() => run('tc', async () => { const p=await pick(); setTcams(await getJ(`/api/rvx/traffic-cams?lat=${p.lat}&lng=${p.lng}&radius=30`)); })}>{picking?'Click…':busy==='tc'?'…':'Pick a spot'}</button>
+        {tcams && <div style={{ fontSize:11, marginTop:4, maxHeight:140, overflow:'auto' }}>{(tcams.features||[]).slice(0,12).map((f:any,i:number)=><div key={i}>{f.properties.caption}{f.properties.preview && <> · <a href={f.properties.preview} target="_blank" rel="noopener" style={{ color:TEAL }}>preview</a></>}</div>)}
+          <div style={{ color:'#7f97b2' }}>{tcams.meta?.source}</div></div>}
+      </Section>
+      <Section title="RADIO SCANNER (OpenWebRX link)">
+        <button style={btn} onClick={() => run('scan', async () => setScan(await getJ('/api/rvx/scanners')))}>{busy==='scan'?'…':'Load receivers'}</button>
+        {scan && <div style={{ fontSize:11, marginTop:4 }}>{(scan.features||[]).slice(0,8).map((f:any,i:number)=>{
+          const u=f.properties.url; const https=String(u).startsWith('https:');
+          return <div key={i} style={{ marginBottom:4 }}>
+            <a href={u} target="_blank" rel="noopener" style={{ color:'#e6f1ff' }}>{f.properties.caption}</a>
+            {https && <button style={{...btn, marginLeft:4, padding:'1px 4px'}} onClick={()=>setEmbed(u)}>Embed</button>}
+          </div>;
+        })}
+          {embed && <iframe title="SDR" src={embed} style={{ width:'100%', height:180, border:'1px solid #1e3a5f', marginTop:4 }} sandbox="allow-scripts allow-same-origin allow-forms" />}
+          <div style={{ color:'#7f97b2' }}>Embed only for https receivers; audio is on their site.</div>
+        </div>}
+      </Section>
       <Section title="BOND OPS">
         <button style={btn} onClick={() => run('exfil', async () => { const p = await pick(); setExfil(await getJ(`/api/rvx/exfil?lat=${p.lat}&lng=${p.lng}`)); })}>{picking ? 'Click…' : busy === 'exfil' ? '…' : 'Exfil routes near point'}</button>
         {exfil && <div style={{ fontSize: 11, marginTop: 4 }}>
