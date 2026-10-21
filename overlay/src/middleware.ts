@@ -15,7 +15,7 @@ const PUBLIC = new Set([
   '/manifest.json', '/site.webmanifest', '/sw.js',
 ]);
 
-const COMMERCIAL_PUBLIC = new Set(['/welcome', '/legal/privacy', '/terms', '/credits', '/api/waitlist', '/api/waitlist/position', '/sitemap.xml', '/country', '/live', '/pricing', '/account', '/api/billing/webhook', '/api/billing/checkout', '/api/billing/portal']);
+const COMMERCIAL_PUBLIC = new Set(['/welcome', '/legal/privacy', '/terms', '/credits', '/api/waitlist', '/api/waitlist/position', '/sitemap.xml', '/sitemap-static.xml', '/sitemap-live.xml', '/sitemap-countries.xml', '/57f052c825adfc60d6a692f36a77fc0f.txt', '/country', '/live', '/pricing', '/account', '/api/billing/webhook', '/api/billing/checkout', '/api/billing/portal']);
 /* Public growth pages: SEO country/live pages, embeds and shared snapshots. */
 const COMMERCIAL_PUBLIC_PREFIX = ['/landing/', '/country/', '/live/', '/embed/', '/s/', '/api/account/'];
 
@@ -62,7 +62,7 @@ export async function middleware(request: NextRequest) {
     if (pathname === '/robots.txt') {
       const base = (process.env.RV_PUBLIC_URL || request.nextUrl.origin).replace(/\/$/, '');
       return new NextResponse(
-        `User-agent: *\nAllow: /$\nAllow: /landing/\nAllow: /privacy\nAllow: /terms\nAllow: /credits\nAllow: /country\nAllow: /live\nAllow: /pricing\nDisallow: /\n\nSitemap: ${base}/sitemap.xml\n`,
+        `User-agent: *\nAllow: /$\nAllow: /landing/\nAllow: /privacy\nAllow: /terms\nAllow: /credits\nAllow: /country\nAllow: /live\nAllow: /pricing\nAllow: /_next/static/\nDisallow: /account\nDisallow: /api/\nDisallow: /demo\nDisallow: /embed/\nDisallow: /s/\nDisallow: /gc/\nDisallow: /\n\nSitemap: ${base}/sitemap.xml\n`,
         { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' } },
       );
     }
