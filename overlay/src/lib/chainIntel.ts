@@ -1,4 +1,5 @@
 import { matchExact, type SanctionEntry } from '@/lib/sanctions';
+import { IS_COMMERCIAL } from '@/lib/edition';
 
 /**
  * ═══════════════════════════════════════════════════════════════
@@ -145,6 +146,7 @@ const PRICE_TTL = 120_000;
 let priceCache: { at: number; usd: Partial<Record<Chain, number>> } | null = null;
 
 async function fetchPrice(chain: Chain): Promise<number | null> {
+  if (IS_COMMERCIAL) return null; // CoinGecko not used in the commercial edition
   if (priceCache && Date.now() - priceCache.at < PRICE_TTL) {
     return priceCache.usd[chain] ?? null;
   }
@@ -252,7 +254,7 @@ async function collectBitcoin(address: string): Promise<RawWallet> {
 }
 
 async function collectEthereum(address: string): Promise<RawWallet> {
-  if (process.env.ETHERSCAN_API_KEY) {
+  if (process.env.ETHERSCAN_API_KEY && !IS_COMMERCIAL) {
     try { return await collectEthereumEtherscan(address); }
     catch (e) { console.warn('[REMOTEVIEW] Etherscan failed, falling back:', e instanceof Error ? e.message : e); }
   }
