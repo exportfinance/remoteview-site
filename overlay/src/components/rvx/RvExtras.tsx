@@ -10,7 +10,7 @@ const BORDER = '1px solid rgba(45,212,191,0.35)';
 type Layer = {
   id: string; label: string; group: string; kind: 'geojson' | 'raster';
   url?: string; tiles?: (date: string) => string; maxzoom?: number; refreshMs?: number;
-  style?: 'circle' | 'fill' | 'line' | 'heat'; color?: string; colorExpr?: any; radius?: any;
+  style?: 'circle' | 'fill' | 'line' | 'heat' | 'cluster'; color?: string; colorExpr?: any; radius?: any;
 };
 const yday = () => new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
 const gibs = (layer: string, lvl: number, ext: string) => (d: string) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${d}/GoogleMapsCompatible_Level${lvl}/{z}/{y}/{x}.${ext}`;
@@ -26,6 +26,7 @@ export const LAYERS: Layer[] = [
   { id: 'volcanoes', label: 'Volcano alerts', group: 'Hazards', kind: 'geojson', url: '/api/rvx/volcanoes', refreshMs: 1200000, style: 'circle', colorExpr: ['match', ['get', 'color'], 'RED', '#EF4444', 'ORANGE', '#F97316', 'YELLOW', '#EAB308', '#22C55E'], radius: 7 },
   { id: 'tsunami', label: 'Tsunami bulletins', group: 'Hazards', kind: 'geojson', url: '/api/rvx/tsunami', refreshMs: 300000, style: 'circle', colorExpr: ['match', ['get', 'level'], 'warning', '#EF4444', 'advisory', '#F97316', 'watch', '#EAB308', '#38BDF8'], radius: 8 },
   { id: 'shake', label: 'Quake shake rings', group: 'Hazards', kind: 'geojson', url: '/api/rvx/shake', refreshMs: 600000, style: 'circle', color: '#FB923C' },
+  { id: 'aurora', label: 'Aurora forecast (OVATION)', group: 'Space', kind: 'geojson', url: '/api/rvx/aurora', refreshMs: 600000, style: 'heat', color: '#4ADE80' },
   { id: 'launches', label: 'Rocket launches', group: 'Space', kind: 'geojson', url: '/api/rvx/launches', refreshMs: 1800000, style: 'circle', color: '#A78BFA', radius: 6 },
   { id: 'iss', label: 'ISS + ground track', group: 'Space', kind: 'geojson', url: '/api/rvx/iss', refreshMs: 5000, style: 'circle', color: TEAL, radius: 7 },
   { id: 'ioda', label: 'Internet outages (IODA)', group: 'Infrastructure', kind: 'geojson', url: '/api/rvx/ioda', refreshMs: 600000, style: 'circle', color: '#F87171' },
@@ -35,8 +36,17 @@ export const LAYERS: Layer[] = [
   { id: 'jamming', label: 'GPS jamming (ADS-B)', group: 'Security', kind: 'geojson', url: '/api/rvx/jamming', refreshMs: 120000, style: 'fill', color: '#EF4444' },
   { id: 'protests', label: 'Protests & unrest (GDELT)', group: 'Security', kind: 'geojson', url: '/api/rvx/protests', refreshMs: 600000, style: 'heat', color: '#F43F5E' },
   { id: 'anomalies', label: 'Anomaly pins', group: 'Security', kind: 'geojson', url: '/api/rvx/anomalies', refreshMs: 120000, style: 'circle', color: '#FACC15', radius: 9 },
+  { id: 'ufo', label: 'UFO reports (unverified, NUFORC)', group: 'Curiosities', kind: 'geojson', url: '/data/ufo/index.json', style: 'cluster', color: '#C084FC' },
   { id: 'ships', label: 'Live ships (AIS)', group: 'Maritime', kind: 'geojson', url: '/api/rvx/ships', refreshMs: 60000, style: 'circle', colorExpr: ['match', ['get', 'kind'], 'tanker', '#F97316', 'lng', '#22D3EE', 'cargo', '#A3E635', 'passenger', '#E879F9', 'military', '#EF4444', '#94A3B8'], radius: 2.5 },
 ];
+
+/* Data provenance: how much weight each feed deserves. */
+export const CONFIDENCE: Record<string, 'high' | 'medium' | 'low'> = {
+  gibs: 'high', sst: 'high', seaice: 'high', nightlights: 'high', storms: 'high', smoke: 'high', volcanoes: 'high', tsunami: 'high', shake: 'medium',
+  aurora: 'high', launches: 'high', iss: 'high', ioda: 'medium', cables: 'high', nuclear: 'medium', power: 'high', lightning: 'medium', jamming: 'medium',
+  protests: 'low', anomalies: 'low', ships: 'medium', ufo: 'low',
+};
+const CONF_COLOR = { high: '#22C55E', medium: '#EAB308', low: '#F97316' };
 
 /* Convert odd API shapes into GeoJSON. */
 function toGeo(id: string, d: any): any {
@@ -83,6 +93,10 @@ export default function RvExtras() {
   const [meta, setMeta] = useState<Record<string, { source?: string; fetched?: string; count?: number; err?: string; needsKey?: string }>>({});
   const [gibsDate, setGibsDate] = useState(yday());
   const [globe, setGlobe] = useState(false);
+  const [ufoFrom, setUfoFrom] = useState('2020-01-01');
+  const [ufoTo, setUfoTo] = useState('2023-12-31');
+  const [ufoHeat, setUfoHeat] = useState(false);
+  const ufoRef = useRef({ from: '2020-01-01', to: '2023-12-31' });
   const [toast, setToast] = useState<string>('');
   const dataRef = useRef<Record<string, any>>({});
   const timers = useRef<Record<string, any>>({});
@@ -121,6 +135,15 @@ export default function RvExtras() {
       m.addLayer({ id: sid, type: 'raster', source: sid, paint: { 'raster-opacity': L.id === 'nightlights' ? 0.9 : 0.85 } }, firstSym);
       return;
     }
+    if (L.style === 'cluster') {
+      m.addSource(sid, { type: 'geojson', data: toGeo(L.id, dataRef.current[L.id]), cluster: true, clusterRadius: 45, clusterMaxZoom: 9 });
+      m.addSource(sid + '-h', { type: 'geojson', data: toGeo(L.id, dataRef.current[L.id]) });
+      m.addLayer({ id: sid + '-heat', type: 'heatmap', source: sid + '-h', layout: { visibility: 'none' }, paint: { 'heatmap-radius': 14, 'heatmap-opacity': 0.75, 'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', 0.3, 'rgba(192,132,252,0.45)', 0.7, '#C084FC', 1, '#F5F3FF'] } });
+      m.addLayer({ id: sid + '-cl', type: 'circle', source: sid, filter: ['has', 'point_count'], paint: { 'circle-color': 'rgba(192,132,252,0.35)', 'circle-stroke-color': '#C084FC', 'circle-stroke-width': 1.5, 'circle-radius': ['step', ['get', 'point_count'], 12, 50, 17, 500, 24, 5000, 32] } });
+      m.addLayer({ id: sid + '-ct', type: 'symbol', source: sid, filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 11 }, paint: { 'text-color': '#F5F3FF' } });
+      m.addLayer({ id: sid, type: 'circle', source: sid, filter: ['!', ['has', 'point_count']], paint: { 'circle-radius': 4.5, 'circle-color': '#C084FC', 'circle-stroke-color': '#06101E', 'circle-stroke-width': 1 } });
+      return;
+    }
     m.addSource(sid, { type: 'geojson', data: toGeo(L.id, dataRef.current[L.id]) });
     const color = L.colorExpr || L.color || TEAL;
     if (L.style === 'fill') {
@@ -128,7 +151,7 @@ export default function RvExtras() {
     } else if (L.style === 'line') {
       m.addLayer({ id: sid, type: 'line', source: sid, filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]], paint: { 'line-color': ['coalesce', ['get', 'color'], color], 'line-width': 1.2, 'line-opacity': 0.75 } }, before);
     } else if (L.style === 'heat') {
-      m.addLayer({ id: sid, type: 'heatmap', source: sid, paint: { 'heatmap-radius': 18, 'heatmap-intensity': 0.8, 'heatmap-opacity': 0.75, 'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', 0.3, 'rgba(244,63,94,0.4)', 0.7, '#F43F5E', 1, '#FDE68A'] } }, before);
+      m.addLayer({ id: sid, type: 'heatmap', source: sid, paint: { 'heatmap-radius': 18, 'heatmap-intensity': 0.8, 'heatmap-opacity': 0.75, 'heatmap-weight': L.id === 'aurora' ? ['/', ['get', 'p'], 50] : 1, 'heatmap-color': L.id === 'aurora' ? ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', 0.3, 'rgba(74,222,128,0.35)', 0.7, '#4ADE80', 1, '#F0ABFC'] : ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', 0.3, 'rgba(244,63,94,0.4)', 0.7, '#F43F5E', 1, '#FDE68A'] } }, before);
       m.addLayer({ id: sid + '-pt', type: 'circle', source: sid, minzoom: 6, paint: { 'circle-radius': 4, 'circle-color': color, 'circle-stroke-color': '#06101E', 'circle-stroke-width': 1 } });
     } else {
       if (L.id === 'shake') {
@@ -144,14 +167,22 @@ export default function RvExtras() {
   }, [gibsDate]);
   const removeLayer = (m: any, id: string) => {
     const sid = `rvx-${id}`;
-    for (const suf of ['', '-pt', '-ln', '-fl']) if (m.getLayer(sid + suf)) m.removeLayer(sid + suf);
+    for (const suf of ['', '-pt', '-ln', '-fl', '-heat', '-cl', '-ct']) if (m.getLayer(sid + suf)) m.removeLayer(sid + suf);
     if (m.getSource(sid)) m.removeSource(sid);
+    if (m.getSource(sid + '-h')) m.removeSource(sid + '-h');
   };
   const load = useCallback(async (L: Layer) => {
     if (!L.url) return;
     try {
-      const d = await getJ(L.url + (L.id === 'cables' ? '' : ''));
+      const d = await getJ(L.url);
       let data = d;
+      if (L.id === 'ufo') {
+        const { from, to } = ufoRef.current;
+        const ys = Object.keys(d.years || {}).filter((y) => y >= from.slice(0, 4) && y <= to.slice(0, 4));
+        const rows = (await Promise.all(ys.map((y) => getJ(`/data/ufo/${y}.json`).catch(() => [])))).flat().filter((r: any) => r[2] >= from && r[2] <= to);
+        data = { type: 'FeatureCollection', meta: { source: d.source + ' — unverified public reports', fetched: d.built, total_records: d.records }, features: rows.map((r: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [r[0], r[1]] }, properties: { label: 'Unverified public report', date: r[2], shape: r[3] || 'unknown', location: r[4], duration: r[5], summary: r[6] } })) };
+        Object.assign(d, { meta: data.meta });
+      }
       if (L.id === 'cables') {
         const lp = await getJ('/api/rvx/cables?what=landing').catch(() => null);
         data = { ...d, features: [...d.features, ...(lp?.features || [])] };
@@ -160,6 +191,7 @@ export default function RvExtras() {
       const g = toGeo(L.id, data);
       setMeta((s) => ({ ...s, [L.id]: { source: d.meta?.source, fetched: d.meta?.fetched, count: g.features?.length ?? 0, needsKey: d.meta?.needsKey, err: undefined } }));
       getMap()?.getSource(`rvx-${L.id}`)?.setData(g);
+      getMap()?.getSource(`rvx-${L.id}-h`)?.setData(g);
     } catch (e) { setMeta((s) => ({ ...s, [L.id]: { ...s[L.id], err: (e as Error).message } })); }
   }, []);
 
@@ -186,6 +218,18 @@ export default function RvExtras() {
     }
   }, [on, load]);
 
+  useEffect(() => {
+    ufoRef.current = { from: ufoFrom, to: ufoTo };
+    if (on.ufo) { const L = LAYERS.find((x) => x.id === 'ufo')!; load(L); }
+  }, [ufoFrom, ufoTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const t = setInterval(() => {
+      const m = getMap(); if (!m?.getLayer('rvx-ufo')) return;
+      const vis = (id: string, v: boolean) => m.getLayer(id) && m.setLayoutProperty(id, 'visibility', v ? 'visible' : 'none');
+      vis('rvx-ufo-heat', ufoHeat); vis('rvx-ufo-cl', !ufoHeat); vis('rvx-ufo-ct', !ufoHeat); vis('rvx-ufo', !ufoHeat);
+    }, 700);
+    return () => clearInterval(t);
+  }, [ufoHeat]);
   // GIBS date change: rebuild the raster source
   useEffect(() => { const m = getMap(); if (m && on.gibs) { removeLayer(m, 'gibs'); } }, [gibsDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -195,15 +239,16 @@ export default function RvExtras() {
     const t = setInterval(() => {
       const m = getMap(); if (!m || m === bound) return; bound = m;
       m.on('click', (e: any) => {
-        const ids = LAYERS.filter((L) => L.kind === 'geojson').flatMap((L) => [`rvx-${L.id}`, `rvx-${L.id}-pt`, `rvx-${L.id}-fl`, `rvx-${L.id}-ln`]).filter((id) => m.getLayer(id));
+        const ids = LAYERS.filter((L) => L.kind === 'geojson').flatMap((L) => [`rvx-${L.id}`, `rvx-${L.id}-pt`, `rvx-${L.id}-fl`, `rvx-${L.id}-ln`, `rvx-${L.id}-cl`]).filter((id) => m.getLayer(id));
         if (!ids.length) return;
         const f = m.queryRenderedFeatures(e.point, { layers: ids })[0]; if (!f) return;
+        if (f.layer.id.endsWith('-cl')) { m.easeTo({ center: e.lngLat, zoom: m.getZoom() + 2 }); return; }
         const lid = f.layer.id.replace(/^rvx-/, '').replace(/-(pt|fl|ln)$/, '');
         const md = meta[lid];
         const rows = Object.entries(f.properties || {}).filter(([, v]) => v !== null && v !== '' && typeof v !== 'object').slice(0, 10)
           .map(([k, v]) => `<div><span style="color:#7f97b2">${k}</span> ${String(v).startsWith('http') ? `<a href="${v}" target="_blank" rel="noopener" style="color:${TEAL}">link</a>` : String(v).replace(/</g, '&lt;')}</div>`).join('');
         const ml = (window as any).maplibregl;
-        const html = `<div style="font:11px ui-monospace,monospace;color:#e6f1ff;max-width:260px">${rows}<div style="margin-top:6px;color:#7f97b2;border-top:1px solid #1e3a5f;padding-top:4px">source: ${md?.source || lid} · ${ago(md?.fetched)}</div></div>`;
+        const html = `<div style="font:11px ui-monospace,monospace;color:#e6f1ff;max-width:260px">${rows}<div style="margin-top:6px;color:#7f97b2;border-top:1px solid #1e3a5f;padding-top:4px">source: ${md?.source || lid} · ${ago(md?.fetched)} · <span style="color:${CONF_COLOR[CONFIDENCE[lid] || 'medium']}">${CONFIDENCE[lid] || 'medium'} confidence</span></div></div>`;
         if (ml?.Popup) new ml.Popup({ className: 'rvx-popup', maxWidth: '280px' }).setLngLat(e.lngLat).setHTML(html).addTo(m);
         else setToast((f.properties?.name || f.properties?.title || lid) as string);
       });
@@ -259,10 +304,18 @@ export default function RvExtras() {
                             {on[l.id] && l.kind === 'geojson' && (
                               <span style={{ display: 'block', color: md?.err ? '#f87171' : md?.needsKey ? '#fbbf24' : '#7f97b2', fontSize: 10 }}>
                                 {md?.err ? `error: ${md.err}` : md?.needsKey ? `needs key: ${md.needsKey}` : md ? `${md.count} items · ${md.source} · ${ago(md.fetched)}` : 'loading…'}
+                                {md && !md.err && !md.needsKey && <span style={{ color: CONF_COLOR[CONFIDENCE[l.id] || 'medium'] }}> · {CONFIDENCE[l.id] || 'medium'} confidence</span>}
                               </span>
                             )}
                             {on[l.id] && l.kind === 'raster' && <span style={{ display: 'block', color: '#7f97b2', fontSize: 10 }}>NASA GIBS{l.id === 'gibs' ? ` · ${gibsDate}` : l.id === 'nightlights' ? ' · Black Marble 2016' : ` · ${gibsDate}`}</span>}
                           </span>
+                          {l.id === 'ufo' && on.ufo && (
+                            <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }} onClick={(e) => e.preventDefault()}>
+                              <input aria-label="UFO from" type="date" value={ufoFrom} min="1925-01-01" max="2023-12-31" onChange={(e) => setUfoFrom(e.target.value)} style={{ ...input, width: 128, padding: '2px 4px' }} />
+                              <input aria-label="UFO to" type="date" value={ufoTo} min="1925-01-01" max="2023-12-31" onChange={(e) => setUfoTo(e.target.value)} style={{ ...input, width: 128, padding: '2px 4px' }} />
+                              <button style={{ ...btn, padding: '2px 4px' }} onClick={() => setUfoHeat((h) => !h)}>{ufoHeat ? 'Clusters' : 'Heatmap'}</button>
+                            </span>
+                          )}
                           {l.id === 'gibs' && on.gibs && <input type="date" value={gibsDate} max={yday()} onChange={(e) => setGibsDate(e.target.value)} style={{ ...input, width: 128, padding: '2px 4px' }} />}
                         </label>
                       );
@@ -319,6 +372,21 @@ function Briefing({ flyTo }: { flyTo: (a: number, b: number, z?: number) => void
   );
 }
 
+function Notices() {
+  const [t, setT] = useState<any>(null); const [w, setW] = useState<any>(null);
+  useEffect(() => { getJ('/api/rvx/tfr').then(setT).catch(() => {}); getJ('/api/rvx/outbreaks').then(setW).catch(() => {}); }, []);
+  return (
+    <>
+      <Section title={`WHO DISEASE OUTBREAK NEWS${w ? ` (${w.items.length})` : ''}`}>
+        {w?.items.slice(0, 8).map((i: any, k: number) => <div key={k} style={{ fontSize: 11, marginBottom: 3 }}><span style={{ color: '#7f97b2' }}>{String(i.date).slice(0, 10)}</span> <a href={i.url} target="_blank" rel="noopener" style={{ color: '#e6f1ff' }}>{i.title}</a></div>)}
+      </Section>
+      <Section title={`FAA TEMPORARY FLIGHT RESTRICTIONS${t ? ` (${t.tfrs.length})` : ''}`}>
+        {t?.tfrs.slice(0, 12).map((i: any, k: number) => <div key={k} style={{ fontSize: 11, marginBottom: 3 }}><span style={{ color: TEAL }}>{i.type}</span> {i.description} <span style={{ color: '#7f97b2' }}>({i.id})</span></div>)}
+      </Section>
+    </>
+  );
+}
+
 function Alerts({ flyTo }: { flyTo: (a: number, b: number, z?: number) => void }) {
   const [d, setD] = useState<any>(null);
   useEffect(() => { const f = () => getJ('/api/rvx/anomalies').then(setD).catch(() => {}); f(); const t = setInterval(f, 120000); return () => clearInterval(t); }, []);
@@ -332,6 +400,7 @@ function Alerts({ flyTo }: { flyTo: (a: number, b: number, z?: number) => void }
         </div>
       ))}
       <div style={{ color: '#4b6a88', fontSize: 10, marginTop: 6 }}>Rules: {d.meta?.rules?.join('; ')}</div>
+      <Notices />
     </Section>
   );
 }

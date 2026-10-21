@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import ErrorBoundary from '@/components/ErrorBoundary';
-import RvExtras from '@/components/rvx/RvExtras';
+import RvExtras from '@/components/rvx/RvExtrasLazy';
 import "./globals.css";
 
 const SITE_URL = "https://remoteview.online";

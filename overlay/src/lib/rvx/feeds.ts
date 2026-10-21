@@ -519,6 +519,30 @@ async function chat(body: any) {
   return { answer: out || 'AI is not configured (set XAI_API_KEY on the server).', ai: !!out, provider: aiConfigured() };
 }
 
+/* ── 43 Aurora (NOAA SWPC OVATION) ────────────────────────── */
+async function aurora() {
+  return cached('aurora', 10 * 60_000, async () => {
+    const d = await getJson('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json', { timeout: 25000 });
+    const f = (d.coordinates || []).filter((c: number[]) => c[2] >= 8 && c[0] % 2 === 0 && c[1] % 2 === 0)
+      .map((c: number[]) => pt(c[0] > 180 ? c[0] - 360 : c[0], c[1], { p: c[2] }));
+    return { ...fc(f), meta: meta('NOAA SWPC OVATION aurora model', { forecast_time: d['Forecast Time'], note: 'p = probability of visible aurora (%)' }) };
+  });
+}
+/* ── 47 FAA TFRs (list; geometry is per-NOTAM) ───────────── */
+async function tfr() {
+  return cached('tfr', 15 * 60_000, async () => {
+    const d = await getJson('https://tfr.faa.gov/tfrapi/exportTfrList', { timeout: 20000 });
+    return { tfrs: (d as any[]).map((t) => ({ id: t.notam_id, type: t.type, state: t.state, facility: t.facility, description: t.description, created: t.creation_date, url: `https://tfr.faa.gov/tfr3/?page=detail_${String(t.notam_id).replace('/', '_')}` })), meta: meta('FAA TFR list (tfr.faa.gov)') };
+  });
+}
+/* ── 45 WHO Disease Outbreak News ─────────────────────────── */
+async function outbreaks() {
+  return cached('who', 60 * 60_000, async () => {
+    const d = await getJson("https://www.who.int/api/news/diseaseoutbreaknews?sf_culture=en&$orderby=PublicationDateAndTime%20desc&$top=15&$select=Title,PublicationDateAndTime,ItemDefaultUrl,UrlName", { timeout: 20000 });
+    return { items: (d.value || []).map((v: any) => ({ title: v.Title, date: v.PublicationDateAndTime, url: 'https://www.who.int/emergencies/disease-outbreak-news/item/' + v.UrlName })), meta: meta('WHO Disease Outbreak News API', { note: 'ProMED requires a subscription; not used' }) };
+  });
+}
+
 /* ── registry ─────────────────────────────────────────────── */
 export const HANDLERS: Record<string, (q: Q, body?: any) => Promise<any>> = {
   ships: () => ships(), chokepoints: () => chokepoints(), lightning: () => lightning(), launches: () => launches(),
@@ -527,6 +551,7 @@ export const HANDLERS: Record<string, (q: Q, body?: any) => Promise<any>> = {
   webcams: (q) => webcams(q), shake: () => shake(), passes: (q) => passes(q), cables: (q) => cables(q), nuclear: () => nuclear(),
   safecast: (q) => safecast(q), anomalies: () => anomalies(), darkships: () => darkships(), change: (q) => change(q),
   story: (q) => story(q), correlate: () => correlate(), briefing: () => briefing(), ask: (q, b) => ask(q, b), chat: (_q, b) => chat(b),
+  aurora: () => aurora(), tfr: () => tfr(), outbreaks: () => outbreaks(),
   status: async () => ({ ai: aiConfigured(), ais: !!envKey('AISSTREAM_API_KEY'), windy: !!envKey('WINDY_WEBCAMS_KEY'), gfw: !!envKey('GFW_API_TOKEN'), lightning: S.lightningUp, history: S.history.length }),
 };
 export const AI_FEEDS = new Set(['ask', 'chat', 'story', 'briefing']);
