@@ -1,8 +1,9 @@
 /* RemoteView extras: features 33–49 (skipping those already covered elsewhere).
    Free public sources only; never invents coordinates or numbers. */
 import { cached, getJson, getText, fc, pt, selfJson } from './util';
+import { IS_COMMERCIAL } from '@/lib/edition';
 import { S, ensureAis } from './live';
-import { riskLayer, countries } from './country';
+import { riskLayer, countries, norm } from './country';
 function shipKind(t?: number | string): string {
   const n = Number(t);
   if (!n) return 'unknown';
@@ -355,8 +356,36 @@ async function refugees() {
   });
 }
 
+/** Commercial edition: counts from the official UK + EU lists (OFAC SDN CSV carries no country field). */
+async function officialSanctionsMap() {
+  return cached('sanctions-map-official', 12 * 3600_000, async () => {
+    const { allEntries, officialSourceStatus } = await import('@/lib/sanctions');
+    const entries = await allEntries();
+    const { list, geo } = await countries();
+    const byName = new Map<string, string>();
+    for (const c of list) { byName.set(norm(c.name), c.iso2); if (c.long) byName.set(norm(c.long), c.iso2); }
+    const counts = new Map<string, number>();
+    for (const e of entries) {
+      const isos = new Set<string>();
+      for (const c of e.countries) { const iso = /^[A-Z]{2}$/.test(c) ? c : byName.get(norm(c)); if (iso) isos.add(iso); }
+      for (const iso of isos) counts.set(iso, (counts.get(iso) || 0) + 1);
+    }
+    const features = geo.features.map((f: any, i: number) => {
+      const n = counts.get(list[i].iso2);
+      return { ...f, properties: { ...f.properties, v: n ?? -1, count: n ?? null, label: n ? `${n} listed targets (UK/EU)` : 'none listed' } };
+    });
+    return {
+      type: 'FeatureCollection', features,
+      meta: meta('Official lists: UK Sanctions List (FCDO, OGL v3) + EU consolidated financial sanctions list; OFAC SDN searchable but has no country field', {
+        sources: officialSourceStatus, note: 'Counts of targets with a nationality/address in the country — not guilt by nationality',
+      }),
+    };
+  });
+}
+
 /** 48 — OpenSanctions map: target counts by country (statistics.json). */
 async function sanctionsMap() {
+  if (IS_COMMERCIAL) return officialSanctionsMap();
   return cached('sanctions-map', 12 * 3600_000, async () => {
     const head = await fetch('https://data.opensanctions.org/datasets/latest/sanctions/statistics.json', { redirect: 'follow', signal: AbortSignal.timeout(20000) });
     const url = head.url;

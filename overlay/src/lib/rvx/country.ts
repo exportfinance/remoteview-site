@@ -1,6 +1,7 @@
 /* RemoteView extras: country dossier sources — CIA World Factbook (archived mirror),
    UKEF country cover policy (gov.uk, OGL) and EXIM Country Limitation Schedule (exim.gov). */
 import { execFile } from 'node:child_process';
+import { IS_COMMERCIAL } from '@/lib/edition';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -197,7 +198,7 @@ export async function dossier(lng: number, lat: number) {
   const c = await countryAt(lng, lat);
   if (!c) return { country: null };
   const { intel } = await import('./intel');
-  const [fb, uk, ex, it] = await Promise.allSettled([factbook(c.fips, c.iso2), ukefAll(), eximAll(), intel(c)]);
+  const [fb, uk, ex, it] = await Promise.allSettled([factbook(c.fips, c.iso2), IS_COMMERCIAL ? Promise.reject(new Error('not in this edition')) : ukefAll(), IS_COMMERCIAL ? Promise.reject(new Error('not in this edition')) : eximAll(), intel(c)]);
   const ukv = uk.status === 'fulfilled' ? uk.value : null; const exv = ex.status === 'fulfilled' ? ex.value : null;
   const exRow = exv ? matchName(exv.rows, c.name, c.long) : undefined;
   return {

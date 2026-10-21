@@ -1,5 +1,7 @@
 /* RemoteView extras: Bond / radio / "crazier" packs + selected 33-49. Free public sources only. */
 import { cached, getJson, getText, fc, pt, selfJson } from './util';
+import { IS_COMMERCIAL } from '@/lib/edition';
+const officialUrl = (id: string) => String(id).startsWith('uk-') ? 'https://www.gov.uk/government/publications/the-uk-sanctions-list' : String(id).startsWith('eu-') ? 'https://data.europa.eu/data/datasets/consolidated-list-of-persons-groups-and-entities-subject-to-eu-financial-sanctions' : 'https://sanctionssearch.ofac.treas.gov/';
 import { S } from './live';
 
 type Q = URLSearchParams;
@@ -135,12 +137,12 @@ export const OPS: Record<string, (q: Q, body?: any) => Promise<any>> = {
     if (name.length < 2) return { matches: [], meta: meta('OpenSanctions OFAC SDN via /api/osint/sanctions', { hint: 'pass ?q=' }) };
     // Keyed api.opensanctions.org skipped — use the local CC-BY OFAC mirror.
     const d = await selfJson(`/api/osint/sanctions?query=${encodeURIComponent(name)}&limit=10`, 30000).catch(() => ({ results: [] }));
-    const matches = (d.results || []).map((r: any) => ({
+    const matches = (d.matches || d.results || []).map((r: any) => ({
       id: r.id, caption: r.name || r.caption, datasets: r.datasets || ['us_ofac_sdn'], score: r.score,
       countries: r.countries || [], schema: r.schema,
-      url: `https://www.opensanctions.org/entities/${r.id}/`,
+      url: IS_COMMERCIAL ? officialUrl(r.id) : `https://www.opensanctions.org/entities/${r.id}/`,
     }));
-    return { matches, meta: meta('OpenSanctions us_ofac_sdn via /api/osint/sanctions (CC-BY 4.0; paid API not used)') };
+    return { matches, meta: meta(IS_COMMERCIAL ? 'Official lists: US OFAC SDN, UK Sanctions List (FCDO), EU consolidated list via /api/osint/sanctions' : 'OpenSanctions us_ofac_sdn via /api/osint/sanctions (CC-BY 4.0; paid API not used)') };
   },
   exfil: async (q) => {
     const lat = n(q.get('lat'), 51.5), lng = n(q.get('lng'), 0); const d = 1.2;

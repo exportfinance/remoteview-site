@@ -1,3 +1,4 @@
+import { IS_COMMERCIAL } from '@/lib/edition';
 /* Palantir pack: entity graphs, OpenSanctions links, threat intel, cases, analytics helpers.
    Free/public data only — no keyed OpenSanctions/Aleph/OTX APIs. */
 import fs from 'node:fs';
@@ -383,6 +384,7 @@ async function threatIntel() {
       sources.push({ id: 'circl-misp', label: 'CIRCL MISP OSINT feed', error: (e as Error).message, keyless: true });
     }
 
+    if (!IS_COMMERCIAL) {
     // 2) abuse.ch Feodotracker (recommended botnet C2)
     try {
       const list = await getJson<any[]>('https://feodotracker.abuse.ch/downloads/ipblocklist.json', { timeout: 20000 });
@@ -401,6 +403,18 @@ async function threatIntel() {
       sources.push({ id: 'abusech-urlhaus', label: 'abuse.ch URLhaus API', skipped: true, reason: 'API returns Unauthorized without a key; FeodoTracker JSON used instead', keyless: false });
     } catch (e) {
       sources.push({ id: 'abusech-feodo', label: 'abuse.ch Feodo Tracker', error: (e as Error).message, keyless: true });
+    }
+
+    }
+
+    // 2b) CISA Known Exploited Vulnerabilities (US govt, public domain)
+    try {
+      const kev = await getJson<any>('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json', { timeout: 30000 });
+      const vulns = (kev?.vulnerabilities || []).slice().sort((x: any, y: any) => String(y.dateAdded).localeCompare(String(x.dateAdded))).slice(0, 40);
+      sources.push({ id: 'cisa-kev', label: 'CISA Known Exploited Vulnerabilities', url: 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog', keyless: true, count: kev?.count });
+      for (const v of vulns) items.push({ source: 'cisa-kev', sourceLabel: 'CISA KEV', id: v.cveID, title: `${v.cveID} ${v.vendorProject} ${v.product}: ${v.vulnerabilityName}`, date: v.dateAdded, detail: v.shortDescription, url: `https://nvd.nist.gov/vuln/detail/${v.cveID}`, kind: 'kev' });
+    } catch (e) {
+      sources.push({ id: 'cisa-kev', label: 'CISA KEV', error: (e as Error).message, keyless: true });
     }
 
     // 3) MITRE ATT&CK groups (intrusion-set JSON from mitre/cti on GitHub)
