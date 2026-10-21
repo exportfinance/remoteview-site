@@ -20,6 +20,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=src /app/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN if [ "$RV_EDITION" != "commercial" ]; then node tools/build-ufo.mjs; else echo 'commercial edition: UFO data not built'; fi
+RUN if [ "$RV_EDITION" = "commercial" ]; then rm -f public/sitemap.xml public/robots.txt; fi
 RUN npm run build
 
 FROM node:22-alpine AS runner

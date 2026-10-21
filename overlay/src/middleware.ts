@@ -14,7 +14,9 @@ const PUBLIC = new Set([
   '/manifest.json', '/site.webmanifest', '/sw.js',
 ]);
 
-const COMMERCIAL_PUBLIC = new Set(['/welcome', '/legal/privacy', '/terms', '/credits', '/api/waitlist', '/sitemap.xml']);
+const COMMERCIAL_PUBLIC = new Set(['/welcome', '/legal/privacy', '/terms', '/credits', '/api/waitlist', '/api/waitlist/position', '/sitemap.xml', '/country', '/live']);
+/* Public growth pages: SEO country/live pages, embeds and shared snapshots. */
+const COMMERCIAL_PUBLIC_PREFIX = ['/landing/', '/country/', '/live/', '/embed/', '/s/'];
 
 async function demoToken(secret: string) {
   const enc = new TextEncoder();
@@ -59,12 +61,12 @@ export async function middleware(request: NextRequest) {
     if (pathname === '/robots.txt') {
       const base = (process.env.RV_PUBLIC_URL || request.nextUrl.origin).replace(/\/$/, '');
       return new NextResponse(
-        `User-agent: *\nAllow: /$\nAllow: /landing/\nAllow: /privacy\nAllow: /terms\nAllow: /credits\nDisallow: /\n\nSitemap: ${base}/sitemap.xml\n`,
+        `User-agent: *\nAllow: /$\nAllow: /landing/\nAllow: /privacy\nAllow: /terms\nAllow: /credits\nAllow: /country\nAllow: /live\nDisallow: /\n\nSitemap: ${base}/sitemap.xml\n`,
         { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' } },
       );
     }
     if (pathname === '/privacy') return NextResponse.rewrite(new URL('/legal/privacy', request.url));
-    if (COMMERCIAL_PUBLIC.has(pathname) || pathname.startsWith('/landing/')) return NextResponse.next();
+    if (COMMERCIAL_PUBLIC.has(pathname) || COMMERCIAL_PUBLIC_PREFIX.some((p) => pathname.startsWith(p))) return NextResponse.next();
   }
   if (PUBLIC.has(pathname) || pathname.startsWith('/_next/static/') || pathname.startsWith('/icons/')) {
     return noindex(NextResponse.next());
@@ -90,6 +92,8 @@ export async function middleware(request: NextRequest) {
       res.headers.set('X-RV-Demo', '1');
       return noindex(res);
     }
+    // Demo visitors may create share snapshots (POST only; the route has its own per-IP limit).
+    if (request.method === 'POST' && pathname === '/api/share') return noindex(NextResponse.next());
     if (pathname.startsWith('/api/')) return noindex(NextResponse.json({ error: 'Available in the full version', upsell: '/#waitlist' }, { status: 402 }));
   }
   if (IS_COMMERCIAL && pathname === '/') return NextResponse.rewrite(new URL('/welcome', request.url));
