@@ -2,6 +2,7 @@
 /* RemoteView extras: extra map layers + panels (briefing, alerts, timeline, ask, tools,
    watchlists, replay, situation rooms). Attaches to the main MapLibre map via window.__rvMap. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PalantirTab, BlueprintStyles } from './Palantir';
 
 const TEAL = '#2DD4BF';
 const NAVY = 'rgba(6,16,30,0.94)';
@@ -116,7 +117,7 @@ const input: React.CSSProperties = { background: '#0b1a2e', color: '#e6f1ff', bo
 
 export default function RvExtras() {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<'layers' | 'brief' | 'alerts' | 'timeline' | 'ask' | 'tools' | 'watch' | 'replay'>('layers');
+  const [tab, setTab] = useState<'layers' | 'brief' | 'alerts' | 'timeline' | 'ask' | 'tools' | 'watch' | 'replay' | 'intel'>('layers');
   const [on, setOn] = useState<Record<string, boolean>>({});
   const [meta, setMeta] = useState<Record<string, { source?: string; fetched?: string; count?: number; err?: string; needsKey?: string }>>({});
   const [gibsDate, setGibsDate] = useState(yday());
@@ -325,9 +326,9 @@ export default function RvExtras() {
       {picking && <div role="status" style={{ position: 'fixed', zIndex: 70, left: '50%', transform: 'translateX(-50%)', top: 70, background: NAVY, color: TEAL, border: BORDER, borderRadius: 6, padding: '8px 12px', fontSize: 12, fontFamily: 'ui-monospace,monospace' }}>Tap the map to choose a point</div>}
       {toast && <div role="status" style={{ position: 'fixed', zIndex: 70, left: '50%', transform: 'translateX(-50%)', top: 70, background: NAVY, color: '#e6f1ff', border: BORDER, borderRadius: 6, padding: '8px 12px', fontSize: 12, fontFamily: 'ui-monospace,monospace', maxWidth: '90vw' }}>{toast}</div>}
       {open && (
-        <div data-testid="rvx-panel" style={{ display: picking ? 'none' : undefined, position: 'fixed', zIndex: 59, right: isMobile ? 0 : 16, left: isMobile ? 0 : 'auto', bottom: isMobile ? 128 : 108, width: isMobile ? '100%' : 360, maxHeight: isMobile ? '55vh' : '70vh', overflow: 'auto', background: NAVY, border: BORDER, borderRadius: isMobile ? '10px 10px 0 0' : 10, color: '#cfe3f5', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: 12, backdropFilter: 'blur(8px)' }}>
+        <div data-testid="rvx-panel" className="rv-bp" style={{ display: picking ? 'none' : undefined, position: 'fixed', zIndex: 59, right: isMobile ? 0 : 16, left: isMobile ? 0 : 'auto', bottom: isMobile ? 128 : 108, width: isMobile ? '100%' : 360, maxHeight: isMobile ? '55vh' : '70vh', overflow: 'auto', background: NAVY, border: BORDER, borderRadius: isMobile ? '10px 10px 0 0' : 10, color: '#cfe3f5', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: 12, backdropFilter: 'blur(8px)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 8, borderBottom: BORDER, position: 'sticky', top: 0, background: NAVY }}>
-            {(['layers', 'brief', 'alerts', 'timeline', 'ask', 'tools', 'watch', 'replay'] as const).map((t) => (
+            {(['layers', 'brief', 'alerts', 'timeline', 'ask', 'tools', 'watch', 'replay', 'intel'] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)} style={{ ...btn, background: tab === t ? 'rgba(45,212,191,0.18)' : 'transparent', textTransform: 'uppercase', letterSpacing: 1, fontSize: 10 }}>{t}</button>
             ))}
           </div>
@@ -423,10 +424,12 @@ export default function RvExtras() {
             {tab === 'tools' && <Tools />}
             {tab === 'watch' && <Watchlist notify={notify} />}
             {tab === 'replay' && <Replay />}
+            {tab === 'intel' && <PalantirTab />}
           </div>
         </div>
       )}
       <WatchRunner notify={notify} />
+      <BlueprintStyles />
       <PwaRegister />
     </>
   );
@@ -815,29 +818,43 @@ function WatchRunner({ notify }: { notify: (t: string) => void }) {
 }
 
 function Replay() {
+  /* Full scrubber with play/ships lives in intel tab; keep a compact twin here. */
   const [list, setList] = useState<any[]>([]); const [idx, setIdx] = useState(-1); const [snap, setSnap] = useState<any>(null);
+  const [playing, setPlaying] = useState(false);
+  const timer = useRef<any>(null);
   useEffect(() => { getJ('/api/rvx/history').then((d) => { setList(d.snapshots); setIdx(d.snapshots.length - 1); }).catch(() => {}); }, []);
   useEffect(() => {
     if (idx < 0 || !list[idx]) return;
     getJ(`/api/rvx/history?t=${list[idx].t}`).then((d) => {
       setSnap(d.snapshot); const m = getMap(); if (!m || !d.snapshot) return;
       const feats = [
-        ...d.snapshot.flights.map((f: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [f[1], f[2]] }, properties: { k: 'flight', c: f[3], name: f[4] } })),
-        ...d.snapshot.quakes.map((q: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [q[1], q[2]] }, properties: { k: 'quake', mag: q[3] } })),
-        ...d.snapshot.events.map((e: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [e[0], e[1]] }, properties: { k: 'event' } })),
+        ...(d.snapshot.flights || []).map((f: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [f[1], f[2]] }, properties: { k: 'flight', c: f[3], name: f[4] } })),
+        ...(d.snapshot.quakes || []).map((q: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [q[1], q[2]] }, properties: { k: 'quake', mag: q[3] } })),
+        ...(d.snapshot.events || []).map((e: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [e[0], e[1]] }, properties: { k: 'event' } })),
+        ...(d.snapshot.ships || []).map((s: any) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s[1], s[2]] }, properties: { k: 'ship', name: s[4] } })),
       ];
       const gj = { type: 'FeatureCollection', features: feats };
       if (m.getSource('rvx-replay')) m.getSource('rvx-replay').setData(gj);
-      else { m.addSource('rvx-replay', { type: 'geojson', data: gj }); m.addLayer({ id: 'rvx-replay', type: 'circle', source: 'rvx-replay', paint: { 'circle-radius': ['match', ['get', 'k'], 'quake', 6, 'event', 3, 2], 'circle-color': ['match', ['get', 'k'], 'quake', '#FB923C', 'event', '#F43F5E', ['match', ['get', 'c'], 'm', '#EF4444', TEAL]], 'circle-opacity': 0.85 } }); }
+      else { m.addSource('rvx-replay', { type: 'geojson', data: gj }); m.addLayer({ id: 'rvx-replay', type: 'circle', source: 'rvx-replay', paint: { 'circle-radius': ['match', ['get', 'k'], 'quake', 6, 'event', 3, 'ship', 3, 2], 'circle-color': ['match', ['get', 'k'], 'quake', '#FB923C', 'event', '#F43F5E', 'ship', '#38BDF8', ['match', ['get', 'c'], 'm', '#EF4444', TEAL]], 'circle-opacity': 0.85 } }); }
     }).catch(() => {});
   }, [idx, list]);
+  useEffect(() => {
+    if (!playing) { if (timer.current) clearInterval(timer.current); return; }
+    timer.current = setInterval(() => setIdx((i) => { if (i >= list.length - 1) { setPlaying(false); return i; } return i + 1; }), 900);
+    return () => clearInterval(timer.current);
+  }, [playing, list.length]);
   useEffect(() => () => { const m = getMap(); if (m?.getLayer('rvx-replay')) { m.removeLayer('rvx-replay'); m.removeSource('rvx-replay'); } }, []);
   if (!list.length) return <div>No snapshots yet — the server records one every 15 minutes (up to 24 h). Check back shortly.</div>;
   return (
     <Section title="REPLAY LAST 24 H">
-      <input type="range" min={0} max={list.length - 1} value={idx} onChange={(e) => setIdx(Number(e.target.value))} style={{ width: '100%', accentColor: TEAL }} />
-      <div>{list[idx] && new Date(list[idx].t).toLocaleString()} · {snap ? `${snap.flights.length} flights (sampled), ${snap.quakes.length} quakes, ${snap.events.length} unrest events` : '…'}</div>
-      <div style={{ color: '#4b6a88', fontSize: 10 }}>{list.length} snapshots stored</div>
+      <input type="range" min={0} max={list.length - 1} value={idx} onChange={(e) => { setPlaying(false); setIdx(Number(e.target.value)); }} style={{ width: '100%', accentColor: TEAL }} />
+      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+        <button style={btn} onClick={() => setPlaying((p) => !p)}>{playing ? 'Pause' : 'Play'}</button>
+        <button style={btn} onClick={() => setIdx(0)}>Start</button>
+        <button style={btn} onClick={() => setIdx(list.length - 1)}>Now</button>
+      </div>
+      <div>{list[idx] && new Date(list[idx].t).toLocaleString()} · {snap ? `${(snap.flights||[]).length} flights, ${(snap.ships||[]).length} ships, ${(snap.quakes||[]).length} quakes, ${(snap.events||[]).length} events` : '…'}</div>
+      <div style={{ color: '#4b6a88', fontSize: 10 }}>{list.length} snapshots · fuller scrubber also under Intel</div>
     </Section>
   );
 }

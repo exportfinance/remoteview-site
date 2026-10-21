@@ -98,7 +98,15 @@ async function snapshot() {
   }
   const quakes = eq.status === 'fulfilled' ? ((eq.value as any).earthquakes || []).slice(0, 300).map((q: any) => [q.id, q.lng, q.lat, q.magnitude, q.time]) : [];
   const events = ev.status === 'fulfilled' ? ((ev.value as any).events || []).slice(0, 300).map((e: any) => [e.lng, e.lat, e.quad, e.root_code, e.country]) : [];
-  S.history.push({ t: Date.now(), flights, quakes, events });
+  const ships: any[] = [];
+  if (S.ships?.size) {
+    for (const s of S.ships.values()) {
+      if (ships.length >= 800) break;
+      if (typeof s.lat === 'number' && typeof s.lng === 'number')
+        ships.push([s.mmsi, +s.lng.toFixed(3), +s.lat.toFixed(3), s.type || 0, (s.name || '').slice(0, 24)]);
+    }
+  }
+  S.history.push({ t: Date.now(), flights, quakes, events, ships });
   while (S.history.length > MAX_SNAPS) S.history.shift();
   try { fs.mkdirSync(path.dirname(HFILE), { recursive: true }); fs.writeFileSync(HFILE, JSON.stringify(S.history)); } catch { /* read-only fs */ }
 }

@@ -5,6 +5,7 @@ import { cached, getJson, getText, fc, pt, selfJson, ai, aiConfigured, envKey } 
 import { S, ensureLightning, ensureAis, ensureHistory } from './live';
 import { OPS } from './ops';
 import { QUEUE } from './queue';
+import { PALANTIR } from './palantir';
 import { dossier, coverLayer, ukefAll, eximAll, riskLayer } from './country';
 
 type Q = URLSearchParams;
@@ -248,7 +249,7 @@ async function protests() {
 async function history(q: Q) {
   ensureHistory();
   const at = q.get('t');
-  if (!at) return { snapshots: S.history.map((s: any) => ({ t: s.t, flights: s.flights.length, quakes: s.quakes.length, events: s.events.length })), meta: meta('RemoteView 15-min snapshots (max 24h)') };
+  if (!at) return { snapshots: S.history.map((s: any) => ({ t: s.t, flights: s.flights.length, quakes: s.quakes.length, events: s.events.length, ships: (s.ships||[]).length })), meta: meta('RemoteView 15-min snapshots (max 24h; flights/quakes/events/ships)') };
   const t = Number(at);
   let best = S.history[0];
   for (const s of S.history) if (Math.abs(s.t - t) < Math.abs((best?.t ?? 0) - t)) best = s;
@@ -562,6 +563,7 @@ export const HANDLERS: Record<string, (q: Q, body?: any) => Promise<any>> = {
   aurora: () => aurora(), tfr: () => tfr(), outbreaks: () => outbreaks(),
   ...OPS,
   ...QUEUE,
+  ...PALANTIR,
   status: async () => ({ ai: aiConfigured(), ais: !!envKey('AISSTREAM_API_KEY'), windy: !!envKey('WINDY_WEBCAMS_KEY'), gfw: !!envKey('GFW_API_TOKEN'), lightning: S.lightningUp, history: S.history.length }),
 };
 export const AI_FEEDS = new Set(['ask', 'chat', 'story', 'briefing']);

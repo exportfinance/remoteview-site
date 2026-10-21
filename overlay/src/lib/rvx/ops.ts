@@ -1,5 +1,5 @@
 /* RemoteView extras: Bond / radio / "crazier" packs + selected 33-49. Free public sources only. */
-import { cached, getJson, getText, fc, pt } from './util';
+import { cached, getJson, getText, fc, pt, selfJson } from './util';
 import { S } from './live';
 
 type Q = URLSearchParams;
@@ -132,16 +132,15 @@ export const OPS: Record<string, (q: Q, body?: any) => Promise<any>> = {
   },
   sanctions: async (q) => {
     const name = (q.get('q') || '').trim();
-    if (name.length < 2) return { matches: [], meta: meta('OpenSanctions (https://www.opensanctions.org)', { hint: 'pass ?q=' }) };
-    const d = await getJson(`https://api.opensanctions.org/search/default?q=${encodeURIComponent(name)}&limit=10`, {
-      timeout: 20000, headers: { Accept: 'application/json' },
-    });
+    if (name.length < 2) return { matches: [], meta: meta('OpenSanctions OFAC SDN via /api/osint/sanctions', { hint: 'pass ?q=' }) };
+    // Keyed api.opensanctions.org skipped — use the local CC-BY OFAC mirror.
+    const d = await selfJson(`/api/osint/sanctions?query=${encodeURIComponent(name)}&limit=10`, 30000).catch(() => ({ results: [] }));
     const matches = (d.results || []).map((r: any) => ({
-      id: r.id, caption: r.caption, datasets: r.datasets, score: r.score,
-      countries: r.properties?.country || [], schema: r.schema,
+      id: r.id, caption: r.name || r.caption, datasets: r.datasets || ['us_ofac_sdn'], score: r.score,
+      countries: r.countries || [], schema: r.schema,
       url: `https://www.opensanctions.org/entities/${r.id}/`,
     }));
-    return { matches, meta: meta('OpenSanctions public search API') };
+    return { matches, meta: meta('OpenSanctions us_ofac_sdn via /api/osint/sanctions (CC-BY 4.0; paid API not used)') };
   },
   exfil: async (q) => {
     const lat = n(q.get('lat'), 51.5), lng = n(q.get('lng'), 0); const d = 1.2;
