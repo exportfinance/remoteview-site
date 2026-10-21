@@ -1445,6 +1445,7 @@ function RemoteViewMap({ data, activeLayers, onEntityClick, onMouseCoords, onRig
       'AIS Stream': 'https://aisstream.io',
       'AIS → Lattice': 'https://aisstream.io',
       'ADS-B / OpenSky': 'https://opensky-network.org',
+      'ADS-B / adsb.lol': 'https://adsb.lol',
       'ADS-B → Lattice': 'https://opensky-network.org',
       'Naval Intelligence': 'https://www.odni.gov',
     };
