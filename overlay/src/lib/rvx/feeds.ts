@@ -3,7 +3,8 @@
 import * as sat from 'satellite.js';
 import { cached, getJson, getText, fc, pt, selfJson, ai, aiConfigured, envKey } from './util';
 import { S, ensureLightning, ensureAis, ensureHistory } from './live';
-import { dossier, coverLayer, ukefAll, eximAll } from './country';
+import { OPS } from './ops';
+import { dossier, coverLayer, ukefAll, eximAll, riskLayer } from './country';
 
 type Q = URLSearchParams;
 const meta = (source: string, extra: Record<string, unknown> = {}) => ({ source, fetched: new Date().toISOString(), ...extra });
@@ -280,7 +281,8 @@ async function shake() {
 /* ── 19 Satellite passes ──────────────────────────────────── */
 async function passes(q: Q) {
   const lat = clampLat(num(q.get('lat'), 51.5)), lng = num(q.get('lng'), 0);
-  const tle: string = await cached('tle-visual', 6 * 3600_000, () => getText('https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle', 20000));
+  const group = ({ visual: 'visual', military: 'military', amateur: 'amateur', weather: 'weather' } as Record<string, string>)[q.get('group') || 'visual'] || 'visual';
+  const tle: string = await cached('tle-' + group, 6 * 3600_000, () => getText(`https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=tle`, 20000));
   const lines = tle.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const obs = { latitude: sat.degreesToRadians(lat), longitude: sat.degreesToRadians(lng), height: 0 };
   const now = Date.now(); const out: any[] = [];
@@ -300,7 +302,7 @@ async function passes(q: Q) {
     }
   }
   out.sort((a, b) => a.start.localeCompare(b.start));
-  return { lat, lng, passes: out.slice(0, 40), meta: meta('CelesTrak "visual" TLEs + SGP4 (satellite.js); next 12h, elevation >10°') };
+  return { lat, lng, passes: out.slice(0, 40), meta: meta(`CelesTrak "${group}" TLEs + SGP4 (satellite.js); next 12h, elevation >10°`) };
 }
 
 /* ── 20 Cables ────────────────────────────────────────────── */
@@ -553,9 +555,11 @@ export const HANDLERS: Record<string, (q: Q, body?: any) => Promise<any>> = {
   safecast: (q) => safecast(q), anomalies: () => anomalies(), darkships: () => darkships(), change: (q) => change(q),
   story: (q) => story(q), correlate: () => correlate(), briefing: () => briefing(), ask: (q, b) => ask(q, b), chat: (_q, b) => chat(b),
   dossier: (q) => dossier(num(q.get('lng'), 0), clampLat(num(q.get('lat'), 0))),
+  'risk-oecd': () => riskLayer('oecd'), 'adv-fcdo': () => riskLayer('fcdo'), 'adv-state': () => riskLayer('state'),
   'cover-ukef': () => coverLayer('ukef'), 'cover-exim': () => coverLayer('exim'),
   ukef: () => ukefAll(), exim: async () => { const e = await eximAll(); return { count: e.rows.length, asOf: e.asOf, unreliable: e.unreliable, footnotes: Object.keys(e.footnotes).length, pdf: e.pdf }; },
   aurora: () => aurora(), tfr: () => tfr(), outbreaks: () => outbreaks(),
+  ...OPS,
   status: async () => ({ ai: aiConfigured(), ais: !!envKey('AISSTREAM_API_KEY'), windy: !!envKey('WINDY_WEBCAMS_KEY'), gfw: !!envKey('GFW_API_TOKEN'), lightning: S.lightningUp, history: S.history.length }),
 };
 export const AI_FEEDS = new Set(['ask', 'chat', 'story', 'briefing']);

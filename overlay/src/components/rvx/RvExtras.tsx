@@ -11,6 +11,7 @@ type Layer = {
   id: string; label: string; group: string; kind: 'geojson' | 'raster';
   url?: string; tiles?: (date: string) => string; maxzoom?: number; refreshMs?: number;
   style?: 'circle' | 'fill' | 'line' | 'heat' | 'cluster'; color?: string; colorExpr?: any; radius?: any;
+  needsBbox?: boolean;
 };
 const yday = () => new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
 const gibs = (layer: string, lvl: number, ext: string) => (d: string) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${d}/GoogleMapsCompatible_Level${lvl}/{z}/{y}/{x}.${ext}`;
@@ -36,6 +37,19 @@ export const LAYERS: Layer[] = [
   { id: 'jamming', label: 'GPS jamming (ADS-B)', group: 'Security', kind: 'geojson', url: '/api/rvx/jamming', refreshMs: 120000, style: 'fill', color: '#EF4444' },
   { id: 'protests', label: 'Protests & unrest (GDELT)', group: 'Security', kind: 'geojson', url: '/api/rvx/protests', refreshMs: 600000, style: 'heat', color: '#F43F5E' },
   { id: 'anomalies', label: 'Anomaly pins', group: 'Security', kind: 'geojson', url: '/api/rvx/anomalies', refreshMs: 120000, style: 'circle', color: '#FACC15', radius: 9 },
+  { id: 'nws', label: 'US NWS weather alerts', group: 'Weather', kind: 'geojson', url: '/api/rvx/nws', refreshMs: 300000, style: 'fill', colorExpr: ['match', ['get', 'severity'], 'Extreme', '#DC2626', 'Severe', '#F97316', 'Moderate', '#EAB308', '#60A5FA'] },
+  { id: 'sondes', label: 'Weather balloons (SondeHub)', group: 'Weather', kind: 'geojson', url: '/api/rvx/sondes', refreshMs: 60000, style: 'circle', color: '#38BDF8', radius: 4 },
+  { id: 'fireballs', label: 'Fireballs (NASA CNEOS)', group: 'Space', kind: 'geojson', url: '/api/rvx/fireballs', style: 'circle', color: '#FBBF24', radius: 6 },
+  { id: 'milsats', label: 'Military satellites (TLE)', group: 'Space', kind: 'geojson', url: '/api/rvx/milsats', refreshMs: 60000, style: 'circle', color: '#F87171', radius: 3 },
+  { id: 'amsats', label: 'Amateur radio sats', group: 'Radio', kind: 'geojson', url: '/api/rvx/amsats', refreshMs: 60000, style: 'circle', color: '#34D399', radius: 3 },
+  { id: 'sdr', label: 'OpenWebRX SDR receivers', group: 'Radio', kind: 'geojson', url: '/api/rvx/sdr', style: 'circle', color: '#A78BFA', radius: 4 },
+  { id: 'embassies', label: 'Embassies in view', group: 'Ops', kind: 'geojson', url: '/api/rvx/embassies', style: 'circle', color: '#F472B6', radius: 5, needsBbox: true },
+  { id: 'bases', label: 'Military bases in view', group: 'Ops', kind: 'geojson', url: '/api/rvx/bases', style: 'circle', color: '#EF4444', radius: 5, needsBbox: true },
+  { id: 'borders', label: 'Border controls in view', group: 'Ops', kind: 'geojson', url: '/api/rvx/borders', style: 'circle', color: '#FBBF24', radius: 5, needsBbox: true },
+  { id: 'vipjets', label: 'Gov/mil callsign aircraft', group: 'Ops', kind: 'geojson', url: '/api/rvx/vipjets', refreshMs: 60000, style: 'circle', color: '#FACC15', radius: 5 },
+  { id: 'risk-oecd', label: 'OECD country risk (0-7)', group: 'Country risk', kind: 'geojson', url: '/api/rvx/risk-oecd', style: 'fill', colorExpr: ['case', ['<', ['get', 'v'], 0], 'rgba(0,0,0,0)', ['interpolate', ['linear'], ['get', 'v'], 0, '#22C55E', 3, '#EAB308', 5, '#F97316', 7, '#DC2626']] },
+  { id: 'adv-fcdo', label: 'FCDO travel advice (UK)', group: 'Country risk', kind: 'geojson', url: '/api/rvx/adv-fcdo', style: 'fill', colorExpr: ['match', ['get', 'v'], 1, '#22C55E', 2, '#EAB308', 3, '#F97316', 4, '#DC2626', 'rgba(0,0,0,0)'] },
+  { id: 'adv-state', label: 'US State Dept advisory level', group: 'Country risk', kind: 'geojson', url: '/api/rvx/adv-state', style: 'fill', colorExpr: ['match', ['get', 'v'], 1, '#22C55E', 2, '#EAB308', 3, '#F97316', 4, '#DC2626', 'rgba(0,0,0,0)'] },
   { id: 'cover-ukef', label: 'UKEF cover status', group: 'Export credit', kind: 'geojson', url: '/api/rvx/cover-ukef', style: 'fill', colorExpr: ['match', ['get', 'status'], 'on', '#22C55E', 'partial', '#EAB308', 'off', '#EF4444', 'contact', '#60A5FA', 'rgba(0,0,0,0)'] },
   { id: 'cover-exim', label: 'US EXIM cover status', group: 'Export credit', kind: 'geojson', url: '/api/rvx/cover-exim', style: 'fill', colorExpr: ['match', ['get', 'status'], 'on', '#22C55E', 'partial', '#EAB308', 'off', '#EF4444', 'rgba(0,0,0,0)'] },
   { id: 'ufo', label: 'UFO reports (unverified, NUFORC)', group: 'Curiosities', kind: 'geojson', url: '/data/ufo/index.json', style: 'cluster', color: '#C084FC' },
@@ -47,6 +61,8 @@ export const CONFIDENCE: Record<string, 'high' | 'medium' | 'low'> = {
   gibs: 'high', sst: 'high', seaice: 'high', nightlights: 'high', storms: 'high', smoke: 'high', volcanoes: 'high', tsunami: 'high', shake: 'medium',
   aurora: 'high', launches: 'high', iss: 'high', ioda: 'medium', cables: 'high', nuclear: 'medium', power: 'high', lightning: 'medium', jamming: 'medium',
   protests: 'low', anomalies: 'low', ships: 'medium', ufo: 'low', 'cover-ukef': 'high', 'cover-exim': 'high',
+  'risk-oecd': 'high', 'adv-fcdo': 'high', 'adv-state': 'high', nws: 'high', sondes: 'high', fireballs: 'high',
+  milsats: 'medium', amsats: 'medium', sdr: 'medium', embassies: 'medium', bases: 'medium', borders: 'medium', vipjets: 'low',
 };
 const CONF_COLOR = { high: '#22C55E', medium: '#EAB308', low: '#F97316' };
 
@@ -83,6 +99,7 @@ type Alert = { t: number; text: string; lng?: number; lat?: number };
 
 function getMap(): any { return typeof window !== 'undefined' ? (window as any).__rvMap : null; }
 async function getJ(url: string, init?: RequestInit) { const r = await fetch(url, init); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; }
+function beep() { try { const c = new (window.AudioContext || (window as any).webkitAudioContext)(); const o = c.createOscillator(); const g = c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value = 880; g.gain.value = 0.04; o.start(); setTimeout(() => { o.stop(); c.close(); }, 160); } catch { /* */ } }
 const ago = (iso?: string | number) => { if (!iso) return '—'; const s = Math.round((Date.now() - (typeof iso === 'number' ? iso : Date.parse(iso))) / 1000); return s < 90 ? `${s}s ago` : s < 5400 ? `${Math.round(s / 60)}m ago` : `${Math.round(s / 3600)}h ago`; };
 
 const btn: React.CSSProperties = { background: 'transparent', color: TEAL, border: BORDER, borderRadius: 5, padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' };
@@ -103,8 +120,28 @@ export default function RvExtras() {
   const dataRef = useRef<Record<string, any>>({});
   const timers = useRef<Record<string, any>>({});
   const [isMobile, setIsMobile] = useState(false);
+  const [picking, setPickingG] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
+  const [follow, setFollow] = useState<{ kind: string; id: string; label: string } | null>(null);
+  const soundOnRef = useRef(false); soundOnRef.current = soundOn;
 
+  useEffect(() => { const f = (e: any) => setPickingG(!!e.detail); window.addEventListener('rvx-pick', f); return () => window.removeEventListener('rvx-pick', f); }, []);
   useEffect(() => { const f = () => setIsMobile(window.innerWidth < 768); f(); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
+  useEffect(() => {
+    if (!follow) return;
+    let dead = false;
+    const tick = async () => {
+      if (dead) return; const m = getMap(); if (!m) return;
+      try {
+        if (follow.kind === 'iss') {
+          const d = await getJ('/api/rvx/iss');
+          const f = (d.features || []).find((x: any) => x.geometry?.type === 'Point');
+          if (f) m.easeTo({ center: f.geometry.coordinates, duration: 800 });
+        }
+      } catch { /* */ }
+    };
+    tick(); const t = setInterval(tick, 5000); return () => { dead = true; clearInterval(t); };
+  }, [follow]);
 
   /* ── URL state (shareable links) ── */
   useEffect(() => {
@@ -176,7 +213,12 @@ export default function RvExtras() {
   const load = useCallback(async (L: Layer) => {
     if (!L.url) return;
     try {
-      const d = await getJ(L.url);
+      let url = L.url;
+      if (L.needsBbox) {
+        const b = getMap()?.getBounds?.(); if (!b) return;
+        url = `${L.url}?w=${b.getWest().toFixed(3)}&s=${b.getSouth().toFixed(3)}&e=${b.getEast().toFixed(3)}&n=${b.getNorth().toFixed(3)}`;
+      }
+      const d = await getJ(url);
       let data = d;
       if (L.id === 'ufo') {
         const { from, to } = ufoRef.current;
@@ -214,7 +256,7 @@ export default function RvExtras() {
     for (const L of LAYERS) {
       if (on[L.id] && L.kind === 'geojson' && !timers.current[L.id]) {
         load(L);
-        if (L.refreshMs) timers.current[L.id] = setInterval(() => load(L), L.refreshMs); else timers.current[L.id] = 'once';
+        if (L.refreshMs) timers.current[L.id] = setInterval(() => { if (!document.hidden) load(L); }, L.refreshMs); else timers.current[L.id] = 'once';
       }
       if (!on[L.id] && timers.current[L.id]) { if (timers.current[L.id] !== 'once') clearInterval(timers.current[L.id]); delete timers.current[L.id]; }
     }
@@ -260,7 +302,7 @@ export default function RvExtras() {
 
   const flyTo = (lng: number, lat: number, zoom = 6) => getMap()?.flyTo({ center: [lng, lat], zoom, essential: true });
   const toggle = (id: string, v?: boolean) => setOn((s) => ({ ...s, [id]: v ?? !s[id] }));
-  const notify = (text: string) => { setToast(text); setTimeout(() => setToast(''), 6000); };
+  const notify = (text: string) => { setToast(text); setTimeout(() => setToast(''), 6000); if (soundOnRef.current) beep(); };
 
   if (typeof window !== 'undefined' && window.location.pathname !== '/') return null;
 
@@ -271,9 +313,10 @@ export default function RvExtras() {
         style={{ position: 'fixed', zIndex: 60, right: isMobile ? 10 : 16, bottom: isMobile ? 84 : 64, background: NAVY, color: TEAL, border: BORDER, borderRadius: 8, padding: '8px 12px', fontSize: 11, letterSpacing: 2, fontWeight: 700, fontFamily: 'ui-monospace,monospace', boxShadow: '0 0 18px rgba(45,212,191,0.15)', cursor: 'pointer' }}>
         {open ? '✕ CLOSE' : '◎ EXTRAS'}
       </button>
+      {picking && <div role="status" style={{ position: 'fixed', zIndex: 70, left: '50%', transform: 'translateX(-50%)', top: 70, background: NAVY, color: TEAL, border: BORDER, borderRadius: 6, padding: '8px 12px', fontSize: 12, fontFamily: 'ui-monospace,monospace' }}>Tap the map to choose a point</div>}
       {toast && <div role="status" style={{ position: 'fixed', zIndex: 70, left: '50%', transform: 'translateX(-50%)', top: 70, background: NAVY, color: '#e6f1ff', border: BORDER, borderRadius: 6, padding: '8px 12px', fontSize: 12, fontFamily: 'ui-monospace,monospace', maxWidth: '90vw' }}>{toast}</div>}
       {open && (
-        <div data-testid="rvx-panel" style={{ position: 'fixed', zIndex: 59, right: isMobile ? 0 : 16, left: isMobile ? 0 : 'auto', bottom: isMobile ? 128 : 108, width: isMobile ? '100%' : 360, maxHeight: isMobile ? '55vh' : '70vh', overflow: 'auto', background: NAVY, border: BORDER, borderRadius: isMobile ? '10px 10px 0 0' : 10, color: '#cfe3f5', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: 12, backdropFilter: 'blur(8px)' }}>
+        <div data-testid="rvx-panel" style={{ display: picking ? 'none' : undefined, position: 'fixed', zIndex: 59, right: isMobile ? 0 : 16, left: isMobile ? 0 : 'auto', bottom: isMobile ? 128 : 108, width: isMobile ? '100%' : 360, maxHeight: isMobile ? '55vh' : '70vh', overflow: 'auto', background: NAVY, border: BORDER, borderRadius: isMobile ? '10px 10px 0 0' : 10, color: '#cfe3f5', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: 12, backdropFilter: 'blur(8px)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 8, borderBottom: BORDER, position: 'sticky', top: 0, background: NAVY }}>
             {(['layers', 'brief', 'alerts', 'timeline', 'ask', 'tools', 'watch', 'replay'] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)} style={{ ...btn, background: tab === t ? 'rgba(45,212,191,0.18)' : 'transparent', textTransform: 'uppercase', letterSpacing: 1, fontSize: 10 }}>{t}</button>
@@ -281,10 +324,28 @@ export default function RvExtras() {
           </div>
           <div style={{ padding: 10 }}>
             {tab === 'layers' && (
+              <>
+              <details style={{ marginBottom: 8, border: BORDER, borderRadius: 6, padding: 6 }}>
+                <summary style={{ cursor: 'pointer', color: TEAL, fontSize: 10, letterSpacing: 1 }}>DATA PROVENANCE</summary>
+                <div style={{ fontSize: 10, color: '#9fb3c8', marginTop: 4, maxHeight: 140, overflow: 'auto' }}>
+                  {LAYERS.filter((l) => on[l.id] && meta[l.id]).map((l) => (
+                    <div key={l.id} style={{ marginBottom: 4 }}>
+                      <span style={{ color: '#e6f1ff' }}>{l.label}</span>
+                      {' · '}<span style={{ color: CONF_COLOR[CONFIDENCE[l.id] || 'medium'] }}>{CONFIDENCE[l.id] || 'medium'}</span>
+                      {meta[l.id]?.count != null && <> · {meta[l.id].count} items</>}
+                      {meta[l.id]?.fetched && <> · {ago(meta[l.id].fetched)}</>}
+                      <div style={{ color: '#4b6a88' }}>{meta[l.id]?.source || '—'}</div>
+                    </div>
+                  ))}
+                  {!LAYERS.some((l) => on[l.id] && meta[l.id]) && <div>Turn on a layer to see its source, age and confidence.</div>}
+                </div>
+              </details>
               <div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                   <button style={btn} onClick={() => { navigator.clipboard?.writeText(shareUrl()); notify('Link copied'); }}>⧉ Copy link</button>
                   <button style={btn} onClick={() => { setGlobe((g) => !g); if (globe) try { getMap()?.setProjection({ type: 'mercator' }); } catch {} }}>{globe ? '▭ Flat map' : '◍ 3D globe'}</button>
+                  <button style={btn} onClick={() => setSoundOn((x) => !x)}>{soundOn ? '🔔 Sound on' : '🔕 Sound off'}</button>
+                  <button style={btn} onClick={() => setFollow((f) => f ? null : { kind: 'iss', id: 'iss', label: 'ISS' })}>{follow ? `⏹ Stop follow (${follow.label})` : '▶ Follow ISS'}</button>
                   <button style={btn} onClick={() => { setGlobe(true); toggle('nightlights', true); }}>☾ Globe + night lights</button>
                 </div>
                 <div style={{ marginBottom: 8, color: '#7f97b2', fontSize: 10, letterSpacing: 1 }}>SITUATION ROOMS</div>
@@ -311,6 +372,13 @@ export default function RvExtras() {
                             )}
                             {on[l.id] && l.kind === 'raster' && <span style={{ display: 'block', color: '#7f97b2', fontSize: 10 }}>NASA GIBS{l.id === 'gibs' ? ` · ${gibsDate}` : l.id === 'nightlights' ? ' · Black Marble 2016' : ` · ${gibsDate}`}</span>}
                           </span>
+                          {(l.id === 'risk-oecd' || l.id === 'adv-fcdo' || l.id === 'adv-state') && on[l.id] && (
+                            <span style={{ fontSize: 10, display: 'flex', flexDirection: 'column' }}>
+                              {l.id === 'risk-oecd' ? <><span style={{ color: '#22C55E' }}>■ 0–1 low</span><span style={{ color: '#EAB308' }}>■ 3</span><span style={{ color: '#F97316' }}>■ 5</span><span style={{ color: '#DC2626' }}>■ 7 high</span></>
+                                : l.id === 'adv-fcdo' ? <><span style={{ color: '#22C55E' }}>■ no warning</span><span style={{ color: '#EAB308' }}>■ parts</span><span style={{ color: '#F97316' }}>■ essential only</span><span style={{ color: '#DC2626' }}>■ all travel</span></>
+                                : <><span style={{ color: '#22C55E' }}>■ L1</span><span style={{ color: '#EAB308' }}>■ L2</span><span style={{ color: '#F97316' }}>■ L3</span><span style={{ color: '#DC2626' }}>■ L4</span></>}
+                            </span>
+                          )}
                           {(l.id === 'cover-ukef' || l.id === 'cover-exim') && on[l.id] && (
                             <span style={{ fontSize: 10, display: 'flex', flexDirection: 'column' }}>
                               <span style={{ color: '#22C55E' }}>■ open</span><span style={{ color: '#EAB308' }}>■ partial</span><span style={{ color: '#EF4444' }}>■ off cover</span>{l.id === 'cover-ukef' && <span style={{ color: '#60A5FA' }}>■ contact UKEF</span>}
@@ -330,6 +398,7 @@ export default function RvExtras() {
                   </div>
                 ))}
               </div>
+            </>
             )}
             {tab === 'brief' && <Briefing flyTo={flyTo} />}
             {tab === 'alerts' && <Alerts flyTo={flyTo} />}
@@ -476,9 +545,9 @@ function Ask({ apply }: { apply: (a: any[]) => void }) {
 function usePick(): [boolean, () => Promise<{ lng: number; lat: number }>] {
   const [picking, setPicking] = useState(false);
   const pick = () => new Promise<{ lng: number; lat: number }>((res) => {
-    const m = getMap(); if (!m) return; setPicking(true);
+    const m = getMap(); if (!m) return; setPicking(true); window.dispatchEvent(new CustomEvent('rvx-pick', { detail: true }));
     m.getCanvas().style.cursor = 'crosshair';
-    m.once('click', (e: any) => { m.getCanvas().style.cursor = ''; setPicking(false); res({ lng: e.lngLat.lng, lat: e.lngLat.lat }); });
+    m.once('click', (e: any) => { m.getCanvas().style.cursor = ''; setPicking(false); window.dispatchEvent(new CustomEvent('rvx-pick', { detail: false })); res({ lng: e.lngLat.lng, lat: e.lngLat.lat }); });
   });
   return [picking, pick];
 }
@@ -487,6 +556,10 @@ function Tools() {
   const [picking, pick] = usePick();
   const [passes, setPasses] = useState<any>(null); const [cams, setCams] = useState<any>(null); const [rad, setRad] = useState<any>(null);
   const [chg, setChg] = useState<any>(null); const [story, setStory] = useState<any>(null); const [sid, setSid] = useState(''); const [busy, setBusy] = useState('');
+  const [exfil, setExfil] = useState<any>(null); const [dropNote, setDropNote] = useState(''); const [dropCode, setDropCode] = useState('');
+  const [pickCode, setPickCode] = useState(''); const [dropRes, setDropRes] = useState<any>(null);
+  const [sanq, setSanq] = useState(''); const [san, setSan] = useState<any>(null);
+  const [epic, setEpic] = useState<any>(null); const [conj, setConj] = useState<any>(null); const [sw, setSw] = useState<any>(null); const [hf, setHf] = useState<any>(null);
   const run = async (k: string, f: () => Promise<void>) => { setBusy(k); try { await f(); } catch (e) { alert((e as Error).message); } setBusy(''); };
   const [dos, setDos] = useState<any>(null);
   return (
@@ -512,6 +585,41 @@ function Tools() {
         {chg && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginTop: 6, fontSize: 10 }}>
           {[['Year ago', chg.year_ago], ['Recent', chg.recent]].map(([l, s]: any) => <div key={l}>{l}: {s ? new Date(s.datetime).toLocaleDateString() : 'no clear scene'}{s?.preview && <img src={s.preview} alt={l} style={{ width: '100%', marginTop: 2 }} />}</div>)}
         </div>}
+      </Section>
+
+      <Section title="BOND OPS">
+        <button style={btn} onClick={() => run('exfil', async () => { const p = await pick(); setExfil(await getJ(`/api/rvx/exfil?lat=${p.lat}&lng=${p.lng}`)); })}>{picking ? 'Click…' : busy === 'exfil' ? '…' : 'Exfil routes near point'}</button>
+        {exfil && <div style={{ fontSize: 11, marginTop: 4 }}>
+          <div>Airports: {(exfil.airports || []).map((a: any) => `${a.name || a.iata} (${a.km}km)`).join('; ') || '—'}</div>
+          <div>Ports: {(exfil.ports || []).map((a: any) => `${a.name} (${a.km}km)`).join('; ') || '—'}</div>
+          <div>Borders: {(exfil.borders || []).map((a: any) => `${a.name} (${a.km}km)`).join('; ') || '—'}</div>
+          <div style={{ color: '#7f97b2' }}>Flights within 100 km: {exfil.flightsWithin100km ?? 'n/a'}</div>
+        </div>}
+        <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
+          <input style={{ ...input, flex: 1 }} placeholder="Dead-drop note" value={dropNote} onChange={(e) => setDropNote(e.target.value)} />
+          <button style={btn} onClick={() => run('drop', async () => { const p = await pick(); const r = await getJ('/api/rvx/deaddrop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note: dropNote, lat: p.lat, lng: p.lng }) }); setDropCode(r.code); })}>Drop</button>
+        </div>
+        {dropCode && <div style={{ fontSize: 11, color: TEAL }}>Code: {dropCode} (24h, lost on restart)</div>}
+        <div style={{ marginTop: 4, display: 'flex', gap: 4 }}>
+          <input style={{ ...input, flex: 1 }} placeholder="Pickup code" value={pickCode} onChange={(e) => setPickCode(e.target.value)} />
+          <button style={btn} onClick={() => run('pick', async () => setDropRes(await getJ(`/api/rvx/deaddrop?code=${encodeURIComponent(pickCode)}`)))}>Pickup</button>
+        </div>
+        {dropRes && <div style={{ fontSize: 11 }}>{dropRes.found ? <>{dropRes.note} @ {Number(dropRes.lat).toFixed(3)},{Number(dropRes.lng).toFixed(3)}</> : 'Not found / expired'}</div>}
+        <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
+          <input style={{ ...input, flex: 1 }} placeholder="Sanctions name" value={sanq} onChange={(e) => setSanq(e.target.value)} />
+          <button style={btn} onClick={() => run('san', async () => setSan(await getJ(`/api/rvx/sanctions?q=${encodeURIComponent(sanq)}`)))}>Search</button>
+        </div>
+        {san?.matches?.slice(0, 5).map((m: any) => <div key={m.id} style={{ fontSize: 11 }}><a href={m.url} target="_blank" rel="noopener" style={{ color: '#e6f1ff' }}>{m.caption}</a> <span style={{ color: '#7f97b2' }}>{m.schema}</span></div>)}
+      </Section>
+      <Section title="SPACE / RADIO">
+        <button style={btn} onClick={() => run('epic', async () => setEpic(await getJ('/api/rvx/epic')))}>{busy === 'epic' ? '…' : 'NASA EPIC Earth'}</button>
+        {epic?.images && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginTop: 4 }}>{epic.images.slice(-4).map((im: any) => <a key={im.url} href={im.url} target="_blank" rel="noopener"><img src={im.url} alt={im.date} style={{ width: '100%', borderRadius: 4 }} /><div style={{ fontSize: 9, color: '#7f97b2' }}>{im.date}</div></a>)}</div>}
+        <button style={{ ...btn, marginTop: 4 }} onClick={() => run('conj', async () => setConj(await getJ('/api/rvx/conjunctions')))}>{busy === 'conj' ? '…' : 'Close approaches (SOCRATES)'}</button>
+        {conj?.rows && <div style={{ fontSize: 10, maxHeight: 120, overflow: 'auto' }}>{conj.rows.slice(0, 12).map((r: any, i: number) => <div key={i}>{r.a} × {r.b} · {r.range_km} km · {r.tca}</div>)}</div>}
+        <button style={{ ...btn, marginTop: 4 }} onClick={() => run('sw', async () => setSw(await getJ('/api/rvx/spaceweather')))}>{busy === 'sw' ? '…' : 'Space weather'}</button>
+        {sw && <div style={{ fontSize: 11 }}>Kp {sw.latestKp?.kp ?? '—'} · alerts {(sw.alerts || []).length}<div style={{ color: '#7f97b2' }}>{(sw.alerts || [])[0]?.message}</div></div>}
+        <button style={{ ...btn, marginTop: 4 }} onClick={() => run('hf', async () => setHf(await getJ('/api/rvx/hf')))}>{busy === 'hf' ? '…' : 'HF conditions'}</button>
+        {hf && <div style={{ fontSize: 11 }}>HF: {hf.hf_conditions}</div>}
       </Section>
       <Section title="STORY MODE (plane hex / ship MMSI)">
         <div style={{ display: 'flex', gap: 6 }}><input style={input} value={sid} onChange={(e) => setSid(e.target.value)} placeholder="e.g. a835af or 235012345" />
