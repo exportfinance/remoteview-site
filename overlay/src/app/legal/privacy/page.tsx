@@ -11,7 +11,10 @@ export default function Privacy() {
         <li>The use case and plan you pick on the form.</li>
         <li>That you ticked the consent box, the exact consent wording, and the time you signed up.</li>
         <li>A one-way hash of your IP address and your browser&apos;s user-agent string, used only to stop spam and abuse.</li>
+        <li>A random referral code for you, which friend (by code) referred you, and how many people joined with your link. These set your queue position.</li>
       </ul>
+      <h2>Shared snapshots</h2>
+      <p>If you press Share in the app, we store the map view (position, zoom, layer names) and a screenshot of the map so anyone with the link can see it. We store no account or personal details with it, apart from a one-way hash of your IP address for abuse limits. Anyone with the link can view a snapshot.</p>
       <h2>Why, and our legal basis</h2>
       <p>We use these details only to contact you about early access and the launch of RemoteView, and to understand demand by use case. Our legal basis is your consent, which you can withdraw at any time.</p>
       <h2>Where it is stored and for how long</h2>
