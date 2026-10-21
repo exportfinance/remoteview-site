@@ -31,9 +31,19 @@ export async function verifyToken(secret: string | undefined, token: string | un
 export async function internalKey(secret: string) {
   return hmac(secret, 'rv-internal');
 }
-export async function checkPassword(given: string, actual: string | undefined) {
-  if (!actual) return false;
-  // compare digests so length does not leak
+/* The password itself is never stored on the server: SITE_PASSWORD_SHA256 holds
+   sha256("rv-pw:" + password) as hex. A plain SITE_PASSWORD is a fallback only. */
+export async function checkPassword(given: string) {
+  const want = (process.env.SITE_PASSWORD_SHA256 || '').trim().toLowerCase();
+  if (/^[0-9a-f]{64}$/.test(want)) {
+    const got = hex(await crypto.subtle.digest('SHA-256', enc.encode('rv-pw:' + given)));
+    return safeEq(got, want);
+  }
+  const actual = process.env.SITE_PASSWORD;
+  if (!actual || actual === '[REDACTED]' || actual.length < 6) return false;
   const s = 'rv-pw-compare';
   return safeEq(await hmac(s, given), await hmac(s, actual));
+}
+export function lockConfigured() {
+  return !!process.env.SITE_AUTH_SECRET && (/^[0-9a-f]{64}$/i.test((process.env.SITE_PASSWORD_SHA256 || '').trim()) || !!process.env.SITE_PASSWORD);
 }

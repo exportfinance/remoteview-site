@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AUTH_COOKIE, AUTH_MAX_AGE, makeToken, checkPassword } from '@/lib/siteAuth';
+import { AUTH_COOKIE, AUTH_MAX_AGE, makeToken, checkPassword, lockConfigured } from '@/lib/siteAuth';
 import { getClientIp } from '@/lib/ssrf-guard';
 
 export const dynamic = 'force-dynamic';
@@ -32,10 +32,10 @@ export async function POST(req: NextRequest) {
   if (!next.startsWith('/') || next.startsWith('//')) next = '/';
 
   const secret = process.env.SITE_AUTH_SECRET;
-  if (!secret || !process.env.SITE_PASSWORD) {
+  if (!secret || !lockConfigured()) {
     return NextResponse.json({ error: 'Site lock is not configured.' }, { status: 503 });
   }
-  if (!(await checkPassword(password, process.env.SITE_PASSWORD))) {
+  if (!(await checkPassword(password))) {
     const cur = f && now < f.reset ? f : { n: 0, reset: now + WINDOW };
     cur.n++;
     fails.set(ip, cur);

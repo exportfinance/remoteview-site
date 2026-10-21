@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import ErrorBoundary from '@/components/ErrorBoundary';
+import RvExtras from '@/components/rvx/RvExtras';
 import "./globals.css";
 
 const SITE_URL = "https://remoteview.online";
@@ -76,7 +77,7 @@ export const metadata: Metadata = {
       },
     ],
   },
-  manifest: "/site.webmanifest",
+  manifest: "/manifest.json",
   alternates: {
     canonical: SITE_URL,
   },
@@ -189,6 +190,7 @@ export default function RootLayout({
         <ErrorBoundary name="REMOTEVIEW Core">
           {children}
         </ErrorBoundary>
+        <RvExtras />
       </body>
     </html>
   );
