@@ -560,6 +560,14 @@ export async function GET() {
   try {
     let data = await fetchPromise;
     fetchPromise = null;
+    // After a restart the regional sweep is still warming up: serve the live
+    // merge, but do not store it as cache / last-good until every region is in.
+    const warm = (data.providers?.regions_ready ?? BIG_REGIONS.length) >= BIG_REGIONS.length;
+    if (!warm) {
+      return NextResponse.json(lastGood && lastGood.total > data.total ? { ...lastGood, source: (lastGood.source || '') + '+lastgood' } : data, {
+        headers: { 'Cache-Control': 'no-store, max-age=0' },
+      });
+    }
     // Never swap a good payload for a degraded one.
     if (lastGood && data.total < lastGood.total * 0.5) {
       console.warn(`[REMOTEVIEW] flights degraded (${data.total} vs ${lastGood.total}) — serving last good`);

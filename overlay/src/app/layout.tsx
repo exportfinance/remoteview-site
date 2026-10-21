@@ -57,17 +57,7 @@ export const metadata: Metadata = {
   authors: [{ name: "RemoteView Project", url: SITE_URL }],
   creator: "RemoteView Project",
   publisher: "RemoteView Project",
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
   icons: {
     icon: [
       { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
