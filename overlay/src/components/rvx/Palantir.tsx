@@ -2,6 +2,7 @@
 /* Palantir pack UI: link graph, OpenSanctions graph, timeline scrubber, deck.gl analytics,
    Blueprint-styled panels, case files, threat intel, Aleph probe. Lazy-loads heavy libs. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { IS_COMMERCIAL } from '@/lib/edition';
 import dynamic from 'next/dynamic';
 
 const TEAL = '#2DD4BF';
@@ -584,7 +585,7 @@ export function PalantirTab() {
         Blueprint dark styling (design tokens only — full @blueprintjs package not bundled). Public/legal data only.
       </p>
       <LinkGraphPanel />
-      <OsGraphPanel />
+      {!IS_COMMERCIAL && <OsGraphPanel />}
       <TimelineScrubber />
       <Analytics3D />
       <CaseFilesPanel />

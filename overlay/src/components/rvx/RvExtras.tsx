@@ -2,6 +2,8 @@
 /* RemoteView extras: extra map layers + panels (briefing, alerts, timeline, ask, tools,
    watchlists, replay, situation rooms). Attaches to the main MapLibre map via window.__rvMap. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { IS_COMMERCIAL, HIDDEN_UI } from '@/lib/edition';
+import { useDemo, DEMO_EXTRA_LAYERS } from '@/lib/demo';
 import { PalantirTab, BlueprintStyles } from './Palantir';
 
 const TEAL = '#2DD4BF';
@@ -17,7 +19,7 @@ type Layer = {
 const yday = () => new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
 const gibs = (layer: string, lvl: number, ext: string) => (d: string) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${d}/GoogleMapsCompatible_Level${lvl}/{z}/{y}/{x}.${ext}`;
 
-export const LAYERS: Layer[] = [
+const ALL_LAYERS: Layer[] = [
   { id: 'gibs', label: 'NASA true colour (daily)', group: 'Imagery', kind: 'raster', tiles: gibs('MODIS_Terra_CorrectedReflectance_TrueColor', 9, 'jpg'), maxzoom: 9 },
   { id: 'sst', label: 'Sea surface temperature', group: 'Imagery', kind: 'raster', tiles: gibs('GHRSST_L4_MUR_Sea_Surface_Temperature', 7, 'png'), maxzoom: 7 },
   { id: 'seaice', label: 'Sea ice (MODIS)', group: 'Imagery', kind: 'raster', tiles: gibs('MODIS_Terra_Sea_Ice', 7, 'png'), maxzoom: 7 },
@@ -64,6 +66,9 @@ export const LAYERS: Layer[] = [
   { id: 'risk-score', label: 'Weekly country risk score (0-100)', group: 'Country risk', kind: 'geojson', url: '/api/rvx/risk-score', style: 'fill', colorExpr: ['case', ['<', ['get', 'v'], 0], 'rgba(0,0,0,0)', ['interpolate', ['linear'], ['get', 'v'], 0, '#22C55E', 35, '#EAB308', 60, '#F97316', 85, '#DC2626']] },
   { id: 'ships', label: 'Live ships (AIS)', group: 'Maritime', kind: 'geojson', url: '/api/rvx/ships', refreshMs: 60000, style: 'circle', colorExpr: ['match', ['get', 'kind'], 'tanker', '#F97316', 'lng', '#22D3EE', 'cargo', '#A3E635', 'passenger', '#E879F9', 'military', '#EF4444', '#94A3B8'], radius: 2.5 },
 ];
+export const LAYERS: Layer[] = IS_COMMERCIAL
+  ? ALL_LAYERS.filter((l) => !HIDDEN_UI.has(l.id)).map((l) => (l.id === 'sanctions-map' ? { ...l, label: 'Sanctions targets by country (UK + EU official lists)' } : l))
+  : ALL_LAYERS;
 
 /* Data provenance: how much weight each feed deserves. */
 export const CONFIDENCE: Record<string, 'high' | 'medium' | 'low'> = {
@@ -117,6 +122,7 @@ const input: React.CSSProperties = { background: '#0b1a2e', color: '#e6f1ff', bo
 
 export default function RvExtras() {
   const [open, setOpen] = useState(false);
+  const demo = useDemo();
   const [tab, setTab] = useState<'layers' | 'brief' | 'alerts' | 'timeline' | 'ask' | 'tools' | 'watch' | 'replay' | 'intel'>('layers');
   const [on, setOn] = useState<Record<string, boolean>>({});
   const [meta, setMeta] = useState<Record<string, { source?: string; fetched?: string; count?: number; err?: string; needsKey?: string }>>({});
@@ -316,7 +322,8 @@ export default function RvExtras() {
 
   if (typeof window !== 'undefined' && window.location.pathname !== '/') return null;
 
-  const groups = [...new Set(LAYERS.map((l) => l.group))];
+  const shown = demo ? LAYERS.filter((l) => DEMO_EXTRA_LAYERS.has(l.id)) : LAYERS;
+  const groups = [...new Set(shown.map((l) => l.group))];
   return (
     <>
       <button aria-label="Open RemoteView extras" onClick={() => setOpen((o) => !o)}
@@ -329,7 +336,7 @@ export default function RvExtras() {
         <div data-testid="rvx-panel" className="rv-bp" style={{ display: picking ? 'none' : undefined, position: 'fixed', zIndex: 59, right: isMobile ? 0 : 16, left: isMobile ? 0 : 'auto', bottom: isMobile ? 128 : 108, width: isMobile ? '100%' : 360, maxHeight: isMobile ? '55vh' : '70vh', overflow: 'auto', background: NAVY, border: BORDER, borderRadius: isMobile ? '10px 10px 0 0' : 10, color: '#cfe3f5', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: 12, backdropFilter: 'blur(8px)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 8, borderBottom: BORDER, position: 'sticky', top: 0, background: NAVY }}>
             {(['layers', 'brief', 'alerts', 'timeline', 'ask', 'tools', 'watch', 'replay', 'intel'] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)} style={{ ...btn, background: tab === t ? 'rgba(45,212,191,0.18)' : 'transparent', textTransform: 'uppercase', letterSpacing: 1, fontSize: 10 }}>{t}</button>
+              <button key={t} onClick={() => { if (demo && t !== 'layers') { window.dispatchEvent(new CustomEvent('rv-demo-locked', { detail: t === 'ask' || t === 'brief' ? 'AI briefings' : t === 'intel' ? 'link graphs and case files' : t === 'tools' ? 'PDF reports and tools' : 'the full toolset' })); return; } setTab(t); }} style={{ ...btn, background: tab === t ? 'rgba(45,212,191,0.18)' : 'transparent', textTransform: 'uppercase', letterSpacing: 1, fontSize: 10 }}>{t}</button>
             ))}
           </div>
           <div style={{ padding: 10 }}>
@@ -367,7 +374,7 @@ export default function RvExtras() {
                 {groups.map((g) => (
                   <div key={g} style={{ marginBottom: 8 }}>
                     <div style={{ color: '#7f97b2', fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>{g.toUpperCase()}</div>
-                    {LAYERS.filter((l) => l.group === g).map((l) => {
+                    {shown.filter((l) => l.group === g).map((l) => {
                       const md = meta[l.id];
                       return (
                         <label key={l.id} data-layer={l.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '5px 4px', borderRadius: 5, cursor: 'pointer', background: on[l.id] ? 'rgba(45,212,191,0.07)' : 'transparent' }}>
@@ -632,7 +639,7 @@ function Tools() {
         {tcams && <div style={{ fontSize:11, marginTop:4, maxHeight:140, overflow:'auto' }}>{(tcams.features||[]).slice(0,12).map((f:any,i:number)=><div key={i}>{f.properties.caption}{f.properties.preview && <> · <a href={f.properties.preview} target="_blank" rel="noopener" style={{ color:TEAL }}>preview</a></>}</div>)}
           <div style={{ color:'#7f97b2' }}>{tcams.meta?.source}</div></div>}
       </Section>
-      <Section title="RADIO SCANNER (OpenWebRX link)">
+      {!IS_COMMERCIAL && <Section title="RADIO SCANNER (OpenWebRX link)">
         <button style={btn} onClick={() => run('scan', async () => setScan(await getJ('/api/rvx/scanners')))}>{busy==='scan'?'…':'Load receivers'}</button>
         {scan && <div style={{ fontSize:11, marginTop:4 }}>{(scan.features||[]).slice(0,8).map((f:any,i:number)=>{
           const u=f.properties.url; const https=String(u).startsWith('https:');
@@ -644,7 +651,7 @@ function Tools() {
           {embed && <iframe title="SDR" src={embed} style={{ width:'100%', height:180, border:'1px solid #1e3a5f', marginTop:4 }} sandbox="allow-scripts allow-same-origin allow-forms" />}
           <div style={{ color:'#7f97b2' }}>Embed only for https receivers; audio is on their site.</div>
         </div>}
-      </Section>
+      </Section>}
       <Section title="BOND OPS">
         <button style={btn} onClick={() => run('exfil', async () => { const p = await pick(); setExfil(await getJ(`/api/rvx/exfil?lat=${p.lat}&lng=${p.lng}`)); })}>{picking ? 'Click…' : busy === 'exfil' ? '…' : 'Exfil routes near point'}</button>
         {exfil && <div style={{ fontSize: 11, marginTop: 4 }}>
@@ -725,7 +732,7 @@ function Dossier({ d }: { d: any }) {
         {fb?.flag && <img src={fb.flag} alt="" style={{ height: 22, border: '1px solid #1e3a5f' }} />}
         <span style={{ color: '#e6f1ff', fontSize: 14 }}>{d.country.name}</span>
       </div>
-      <div style={{ color: TEAL, fontSize: 11, margin: '8px 0 4px' }}>EXPORT CREDIT COVER</div>
+      {!IS_COMMERCIAL && <><div style={{ color: TEAL, fontSize: 11, margin: '8px 0 4px' }}>EXPORT CREDIT COVER</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ border: BORDER, borderRadius: 6, padding: 6 }}>
           <div style={{ color: '#e6f1ff' }}>UKEF</div>
@@ -737,7 +744,7 @@ function Dossier({ d }: { d: any }) {
           {ex?.row ? <><div style={{ fontSize: 11 }}>Public: ≤1y {yn(ex.row.public.st)} · 1-7y {yn(ex.row.public.mt)} · 7y+ {yn(ex.row.public.lt)}</div><div style={{ fontSize: 11 }}>Private: ≤1y {yn(ex.row.private.st)} · 1-7y {yn(ex.row.private.mt)} · 7y+ {yn(ex.row.private.lt)}</div>{Object.entries(ex.footnotes || {}).map(([k, v]: any) => <div key={k} style={{ fontSize: 10, color: '#9fb3c8', marginTop: 3 }}>Note {k}: {v}</div>)}</> : <div style={{ fontSize: 11 }}>{ex?.error || 'Not listed in the CLS'}</div>}
           <div style={{ fontSize: 10, color: '#4b6a88', marginTop: 4 }}>CLS as of {ex?.asOf} · <a href={ex?.pdf || ex?.url} target="_blank" rel="noopener" style={{ color: TEAL }}>exim.gov</a></div>
         </div>
-      </div>
+      </div></>}
       {d.intel && <CountryIntel it={d.intel} />}
       <div style={{ color: TEAL, fontSize: 11, margin: '10px 0 4px' }}>CIA WORLD FACTBOOK</div>
       {fb?.available ? <>
