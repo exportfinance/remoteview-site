@@ -4,6 +4,7 @@ import * as sat from 'satellite.js';
 import { cached, getJson, getText, fc, pt, selfJson, ai, aiConfigured, envKey } from './util';
 import { S, ensureLightning, ensureAis, ensureHistory } from './live';
 import { OPS } from './ops';
+import { QUEUE } from './queue';
 import { dossier, coverLayer, ukefAll, eximAll, riskLayer } from './country';
 
 type Q = URLSearchParams;
@@ -560,6 +561,7 @@ export const HANDLERS: Record<string, (q: Q, body?: any) => Promise<any>> = {
   ukef: () => ukefAll(), exim: async () => { const e = await eximAll(); return { count: e.rows.length, asOf: e.asOf, unreliable: e.unreliable, footnotes: Object.keys(e.footnotes).length, pdf: e.pdf }; },
   aurora: () => aurora(), tfr: () => tfr(), outbreaks: () => outbreaks(),
   ...OPS,
+  ...QUEUE,
   status: async () => ({ ai: aiConfigured(), ais: !!envKey('AISSTREAM_API_KEY'), windy: !!envKey('WINDY_WEBCAMS_KEY'), gfw: !!envKey('GFW_API_TOKEN'), lightning: S.lightningUp, history: S.history.length }),
 };
 export const AI_FEEDS = new Set(['ask', 'chat', 'story', 'briefing']);
