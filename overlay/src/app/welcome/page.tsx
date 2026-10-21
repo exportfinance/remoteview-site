@@ -227,7 +227,7 @@ export default async function Welcome() {
 
       <footer className="rvl-foot"><div className="rvl-wrap">
         <div>© {new Date().getFullYear()} RemoteView</div>
-        <div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/credits">Data credits</a><a href="/demo">Demo</a><a href="/login">Sign in</a></div>
+        <div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/credits">Data credits</a><a href="/demo">Demo</a><a href="https://discord.gg/T6VuJTnKC" target="_blank" rel="noopener noreferrer">Discord</a><a href="/login">Sign in</a></div>
       </div></footer>
       <div className="rvl-mcta"><a className="rvl-ghost" style={{ background: 'rgba(3,9,18,.92)' }} href="/demo">Live demo</a><a className="rvl-btn" href="#waitlist">Accept the mission</a></div>
       <script dangerouslySetInnerHTML={{ __html: reveal }} />

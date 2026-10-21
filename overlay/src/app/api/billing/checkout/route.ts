@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { getClientIp, isRateLimited } from '@/lib/ssrf-guard';
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   try {
     let customer = user.stripe_customer_id;
     if (!customer) {
-      const c = await s.customers.create({ email: user.email, metadata: { rv_user: user.id } }, { idempotencyKey: `rv-cus-${user.id}` });
+      const c = await s.customers.create({ email: user.email, metadata: { rv_user: user.id } }, { idempotencyKey: `rv-cus-${user.id}-${createHash('sha256').update(String(user.email)).digest('hex').slice(0, 16)}` });
       customer = c.id; await setCustomer(user.id, customer);
     }
     const coupon = founderCoupon();
