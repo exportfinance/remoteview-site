@@ -18,8 +18,8 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
   const left = enabled ? await founderLeft() : null;
   const founder = enabled ? (left ?? 0) > 0 : true; // founder offer shown when billing is off
   const plans = [
-    { id: 'personal', ...PLANS.personal, features: ['Live flights, satellites, quakes, weather', 'Country risk and travel advisories', 'Hazards, imagery and 40+ layers', 'Share snapshots'] },
-    { id: 'pro', ...PLANS.pro, featured: true, features: ['Everything in Personal', 'AI briefings (when enabled)', 'PDF reports and case files', 'Link graphs and sanctions search'] },
+    { id: 'personal', ...PLANS.personal, features: ['Conflict signals and situation rooms', 'Internet outages and infrastructure', 'Shipping chokepoints', 'Country risk and travel advisories', 'Breaking disasters, weather and 40+ live layers'] },
+    { id: 'pro', ...PLANS.pro, featured: true, features: ['Everything in Personal', 'AI briefings that cite their sources', 'PDF country reports and case files', 'Link graphs and sanctions search'] },
   ];
   return (
     <SeoShell jsonLd={{ '@context': 'https://schema.org', '@type': 'Product', name: 'RemoteView', offers: [
@@ -32,7 +32,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
       {founder && <div className="hud-cta" style={{ margin: '0 0 20px' }}><div><div className="hud-mono" style={{ fontSize: 11, letterSpacing: '.25em', color: '#5eead4' }}>// FOUNDER PRICING</div><div style={{ fontSize: 20, marginTop: 6 }}>First {FOUNDER_LIMIT} members: {FOUNDER_PERCENT}% off for life, applied automatically.</div>{left != null && left <= 100 && <div className="hud-lbl">{left} founder places left.</div>}</div></div>}
       {!enabled && <p className="hud-lbl" style={{ marginBottom: 14 }}>Every plan starts with a 7-day free trial.</p>}
       <PricingGrid plans={plans} enabled={enabled} founder={founder} founderPct={FOUNDER_PERCENT} trialDays={TRIAL_DAYS} teamsHref={TEAMS_MAILTO} />
-      <p className="hud-src" style={{ marginTop: 22 }}>Prices in US dollars. Taxes may apply where required. Payments are handled by Stripe; we never see your full card number. See the <a href="/terms#subscriptions">subscription, cancellation and refund terms</a>.</p>
+      <p className="hud-src" style={{ marginTop: 22 }}>Prices in US dollars. Taxes may apply where required. Payments are handled by Stripe; we never see your full card number. See the <a href="/terms#subscriptions" style={{ textDecoration: 'underline' }}>subscription, cancellation and refund terms</a>.</p>
     </SeoShell>
   );
 }
