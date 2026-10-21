@@ -79,6 +79,7 @@ export async function factbook(fips: string, iso2: string) {
     source: 'CIA World Factbook (public domain) — final edition via github.com/factbook/factbook.json; CIA discontinued the Factbook on 4 Feb 2026',
     url: `https://github.com/factbook/factbook.json/blob/master/${p}`,
     flag: iso2 && iso2 !== '-99' ? `https://flagcdn.com/w80/${iso2.toLowerCase()}.png` : null, flag_source: 'flagcdn.com (public-domain flag images)',
+    elections: pick(d.Government?.['Executive branch'], ['most recent election date', 'expected date of next election', 'election/appointment process']),
     government: pick(d.Government, ['Country name', 'Government type', 'Capital', 'Chief of state', 'Head of government', 'Legislative branch']),
     people: pick(d['People and Society'], ['Population', 'Languages', 'Religions', 'Median age']),
     economy: pick(d.Economy, ['Real GDP (purchasing power parity)', 'GDP (official exchange rate)', 'Real GDP growth rate', 'Real GDP per capita', 'Inflation rate (consumer prices)', 'Industries', 'Exports', 'Exports - commodities', 'Exports - partners']),
