@@ -213,6 +213,7 @@ export default function RootLayout({
         </ErrorBoundary>
         <RvExtras />
         {IS_COMMERCIAL && <DemoChrome />}
+        {IS_COMMERCIAL && <script data-goatcounter="/gc/count" async src="/gc/count.js" />}
         {IS_COMMERCIAL && <ShareButton />}
         {IS_COMMERCIAL && <BillingLink />}
         {IS_COMMERCIAL && (

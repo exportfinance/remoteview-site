@@ -2,6 +2,7 @@
 import { useState } from 'react';
 /** Starts Stripe Checkout for a plan; signs the visitor in first if needed. Falls back to account sign-up when billing is off. */
 export async function startCheckout(plan: string, interval: string): Promise<string | null> {
+  try { (window as any).goatcounter?.count?.({ path: 'checkout-start-' + plan + '-' + interval, title: 'Checkout started', event: true }); } catch {}
   const r = await fetch('/api/billing/checkout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plan, interval }) });
   const j = await r.json().catch(() => ({}));
   if (r.ok && j.url) { location.href = j.url; return null; }

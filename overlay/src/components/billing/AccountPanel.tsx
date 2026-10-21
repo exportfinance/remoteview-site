@@ -19,6 +19,7 @@ export default function AccountPanel({ billing }: { billing: boolean }) {
   // Once checkout is confirmed, re-issue the session server-side and go straight into the app.
   useEffect(() => {
     if (q.get('checkout') !== 'success' || !me?.entitled) return;
+    try { (window as any).goatcounter?.count?.({ path: 'trial-start', title: 'Trial started', event: true }); } catch {}
     const t = setTimeout(() => { location.href = '/api/account/refresh?next=/'; }, 1200); return () => clearTimeout(t);
   }, [me?.entitled]);
   async function auth(e: React.FormEvent<HTMLFormElement>) {
