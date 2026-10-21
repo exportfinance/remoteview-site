@@ -5,7 +5,7 @@ export default function Terms() {
   return (
     <LegalShell title="Terms of use" updated="21 October 2026">
       <p>These terms cover this website, RemoteView accounts and paid subscriptions.</p>
-      <h2 id="subscriptions">Subscriptions, cancellation and refunds <span style={{ color: '#fbbf24', fontSize: 13 }}>(DRAFT, not yet reviewed by a lawyer)</span></h2>
+      <h2 id="subscriptions">Subscriptions, cancellation and refunds</h2>
       <ul>
         <li><b>Plans and prices.</b> Personal is $19.99 a month or $199 a year; Pro is $49.50 a month or $495 a year, in US dollars. Taxes are added where the law requires. Teams is quoted separately.</li>
         <li><b>Free trial.</b> Each plan starts with a 7-day free trial. We take your card at sign-up through Stripe, but charge nothing during the trial. If you do not cancel before the trial ends, your subscription starts and the first payment is taken automatically. One trial per person.</li>

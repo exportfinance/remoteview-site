@@ -172,7 +172,7 @@ export default async function Welcome() {
       <section className="rvl-sec" id="features"><div className="rvl-wrap">
         <h2 className="rvl-r">One map. Every signal.</h2>
         <p className="rvl-sub">RemoteView brings dozens of open and public-sector data feeds together so you stop juggling tabs. Every layer shows where its data came from.</p>
-        <div className="rvl-grid">{FEATURES.map(([t, d]) => <div key={t} className="rvl-card rvl-r rvl-dossier rvl-glitch-h" data-file={'DOSSIER // ' + String(FEATURES.findIndex((f) => f[0] === t) + 1).padStart(2, '0')}><h3>{t}</h3><p>{d}</p></div>)}</div>
+        <div className="rvl-grid">{FEATURES.map(([t, d]) => <div key={t} className="rvl-card rvl-r rvl-glitch-h" data-file={String(FEATURES.findIndex((f) => f[0] === t) + 1).padStart(2, '0')}><h3>{t}</h3><p>{d}</p></div>)}</div>
       </div></section>
 
       <section className="rvl-sec" style={{ paddingTop: 0 }}><div className="rvl-wrap">

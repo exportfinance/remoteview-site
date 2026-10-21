@@ -1750,7 +1750,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3 mt-1.5 pl-[44px] min-w-0 pr-4">
           <span className="text-[9px] md:text-[9px] text-[var(--text-muted)] font-mono tracking-[0.2em] md:tracking-[0.3em] uppercase opacity-40 truncate">
-            REAL-TIME GLOBAL MONITORING <span className="hidden md:inline">· FLIGHTS · MARITIME · SATELLITES · CCTV · WEATHER · CYBER THREATS</span>
+            REAL-TIME GLOBAL MONITORING <span className="hidden md:inline">· {IS_COMMERCIAL ? 'CONFLICT · OUTAGES · SHIPPING · COUNTRY RISK · DISASTERS' : 'FLIGHTS · MARITIME · SATELLITES · CCTV · WEATHER · CYBER THREATS'}</span>
           </span>
         </div>
       </motion.div>

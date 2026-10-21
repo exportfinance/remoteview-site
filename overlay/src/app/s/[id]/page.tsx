@@ -25,7 +25,7 @@ export default async function Snapshot({ params }: { params: Promise<{ id: strin
       <div className="hud-kick">// SHARED SNAPSHOT · {new Date(s.created_at as any).toISOString().slice(0, 16).replace('T', ' ')} UTC</div>
       <h1>{s.place ? `Live view over ${s.place}` : 'Shared live view'}</h1>
       <p className="hud-sub hud-mono" style={{ fontSize: 14 }}>{coord(s.lat, s.lng)} · zoom {s.zoom.toFixed(1)}</p>
-      <div className="hud-card" data-file="FILE // SNAPSHOT" style={{ padding: '38px 8px 8px' }}>
+      <div className="hud-card" data-file="Snapshot" style={{ padding: '38px 8px 8px' }}>
         {s.hasImage ? <img src={`/s/${s.id}/image`} width={1200} height={630} alt={`Map snapshot${s.place ? ` over ${s.place}` : ''}`} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 3, aspectRatio: '1200/630', objectFit: 'cover', background: '#06182a' }} /> : <div className="hud-lbl" style={{ padding: 40, textAlign: 'center' }}>No image was captured for this view.</div>}
       </div>
       {layers.length > 0 && <div className="hud-links" style={{ marginTop: 14 }}>{layers.slice(0, 20).map((l) => <span key={l} style={{ fontSize: 13, border: '1px solid rgba(45,212,191,.18)', padding: '6px 10px', borderRadius: 999 }}>{pretty(l)}</span>)}</div>}
