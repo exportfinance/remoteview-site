@@ -1,0 +1,56 @@
+# Orbital Watch STAGING. Separate compose project; does not touch /opt/remoteview services, DB or env.
+name: rv-staging
+services:
+  owdb:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ow
+      POSTGRES_DB: rv_staging
+      POSTGRES_PASSWORD_FILE: /run/secrets/dbpw
+    secrets: [dbpw]
+    volumes: [owdb:/var/lib/postgresql/data]
+    mem_limit: 192m
+    cpus: 0.5
+    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=20", "-c", "work_mem=4MB"]
+    networks: [internal]
+  app:
+    image: rv-staging-app:ow1
+    restart: unless-stopped
+    extra_hosts: ["opendata.adsb.fi:0.0.0.0", "api.adsb.fi:0.0.0.0", "adsb.fi:0.0.0.0"]
+    env_file: staging.env
+    environment:
+      OW_DATA_DIR: /data/imagery
+      NODE_OPTIONS: --max-old-space-size=384
+    volumes:
+      - /mnt/rv-staging-imagery:/data/imagery:ro
+    mem_limit: 640m
+    cpus: 0.75
+    depends_on: [owdb]
+    networks:
+      internal: {}
+      edge:
+        aliases: [rv-staging-app]
+  worker:
+    image: rv-staging-worker:ow1
+    restart: unless-stopped
+    env_file: worker.env
+    environment:
+      OW_DATA_DIR: /data/imagery
+      OW_APP_URL: http://app:3000
+    volumes:
+      - /mnt/rv-staging-imagery:/data/imagery
+    mem_limit: 768m
+    cpus: 1.0
+    depends_on: [owdb, app]
+    networks: [internal]
+volumes:
+  owdb: {}
+secrets:
+  dbpw:
+    file: ./secrets/dbpw
+networks:
+  internal: {}
+  edge:
+    external: true
+    name: remoteview_default
