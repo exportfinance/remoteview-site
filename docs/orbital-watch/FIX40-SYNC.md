@@ -1,0 +1,116 @@
+# Sync to live commercial-fix40
+
+The live image `ghcr.io/exportfinance/remoteview-site:commercial` (= `commercial-fix40`, image id cfa7da1030e1) was built
+on the server from a local context and is newer than `commercial` @ 96c33fc. Its `/app` source was extracted from the image and
+compared with bundle + tools + overlay at 96c33fc. The 106 files below differ or are new; they are packed (base64 tar.gz, same
+convention as `bundle/`) in `overlay-fix40/part00` and unpacked after `overlay/` by the Dockerfile. A readable unified diff is in
+`fix40-vs-96c33fc.patch` (package-lock.json and CSV data omitted from the patch). Not included: generated `public/data/ufo`,
+the app-level Dockerfile.
+
+Files:
+- `package-lock.json`
+- `package.json`
+- `next.config.ts`
+- `src/instrumentation.ts`
+- `src/middleware.ts`
+- `src/app/page.tsx`
+- `src/app/globals.css`
+- `src/app/layout.tsx`
+- `src/app/sitemap-live.xml/route.ts`
+- `src/app/embed/w/[key]/route.ts`
+- `src/app/credits/page.tsx`
+- `src/app/live/page.tsx`
+- `src/app/live/claim-check/page.tsx`
+- `src/app/live/daily-brief/page.tsx`
+- `src/app/live/[topic]/page.tsx`
+- `src/app/r/[code]/route.ts`
+- `src/app/pricing/page.tsx`
+- `src/app/v/page.tsx`
+- `src/app/sitemap-countries.xml/route.ts`
+- `src/app/alerts/page.tsx`
+- `src/app/alerts/AlertsFormClient.tsx`
+- `src/app/og/v/route.ts`
+- `src/app/alerts.xml/route.ts`
+- `src/app/country/page.tsx`
+- `src/app/country/[slug]/page.tsx`
+- `src/app/api/widgets/route.ts`
+- `src/app/api/rvx/[feed]/route.ts`
+- `src/app/api/feed-health/route.ts`
+- `src/app/api/devkeys/route.ts`
+- `src/app/api/billing/checkout/route.ts`
+- `src/app/api/satellites/route.ts`
+- `src/app/api/zones/route.ts`
+- `src/app/api/maritime/route.ts`
+- `src/app/api/flight-route/route.ts`
+- `src/app/api/alerts/subscribe/route.ts`
+- `src/app/api/alerts/test/route.ts`
+- `src/app/api/alerts/vapid/route.ts`
+- `src/app/api/alerts/pending/route.ts`
+- `src/app/api/alerts/recent/route.ts`
+- `src/app/api/account/signup/route.ts`
+- `src/app/api/account/me/route.ts`
+- `src/app/api/flights-status/route.ts`
+- `src/app/api/briefing-signup/route.ts`
+- `src/app/api/v1/[feed]/route.ts`
+- `src/app/api/weather/route.ts`
+- `src/app/api/flights/route.ts`
+- `src/app/s/[id]/page.tsx`
+- `src/app/welcome/page.tsx`
+- `src/components/RemoteViewMap.tsx`
+- `src/components/LayerPanel.tsx`
+- `src/components/IntelFeed.tsx`
+- `src/components/CameraViewer.tsx`
+- `src/components/MarketsPanel.tsx`
+- `src/components/SharePanel.tsx`
+- `src/components/BriefingCard.tsx`
+- `src/components/FeedChip.tsx`
+- `src/components/LiveAlerts.tsx`
+- `src/components/StyleStudioStage.tsx`
+- `src/components/FeedHealth.tsx`
+- `src/components/rvx/RvExtras.tsx`
+- `src/components/rvx/RvExtrasLazy.tsx`
+- `src/components/rvx/FlightsDelayed.tsx`
+- `src/components/share/ShareButton.tsx`
+- `src/components/billing/AccountPanel.tsx`
+- `src/components/billing/PricingGrid.tsx`
+- `src/components/oi/quotes.tsx`
+- `src/components/seo/Shell.tsx`
+- `src/components/alerts/AlertsSubscribe.tsx`
+- `src/lib/edition.ts`
+- `src/lib/briefingList.ts`
+- `src/lib/shot.ts`
+- `src/lib/sourceCache.ts`
+- `src/lib/stealthFetch.ts`
+- `src/lib/paid.ts`
+- `src/lib/demoLists.ts`
+- `src/lib/zones.ts`
+- `src/lib/widgets.ts`
+- `src/lib/devapi.ts`
+- `src/lib/referrals.ts`
+- `src/lib/accounts.ts`
+- `src/lib/tier.ts`
+- `src/lib/feedHealth.ts`
+- `src/lib/gdeltEvents.ts`
+- `src/lib/rvx/live.ts`
+- `src/lib/rvx/nightchange.ts`
+- `src/lib/rvx/cluster36.ts`
+- `src/lib/rvx/pro.ts`
+- `src/lib/rvx/spy.ts`
+- `src/lib/rvx/feeds.ts`
+- `src/lib/rvx/ship37.ts`
+- `src/lib/rvx/globe.ts`
+- `src/lib/rvx/extras34.ts`
+- `src/lib/rvx/sats.ts`
+- `src/lib/rvx/ops.ts`
+- `src/lib/rvx/util.ts`
+- `src/lib/rvx/newlayers.ts`
+- `src/lib/rvx/queue.ts`
+- `src/lib/seo/live.ts`
+- `src/lib/seo/changes.ts`
+- `src/lib/seo/sitemap.ts`
+- `src/lib/alerts/webpush.ts`
+- `src/lib/alerts/store.ts`
+- `src/lib/alerts/engine.ts`
+- `src/lib/alerts/social.ts`
+- `public/alerts-sw.js`
+- `public/data/plane-alert-gov.csv`

@@ -4,6 +4,9 @@ COPY bundle/ /bundle/
 RUN cat /bundle/part* | base64 -d | tar xz -C /app
 COPY tools/ /app/tools/
 COPY overlay/ /app/
+# Live commercial-fix40 source (built on remoteview-1 2026-10-28, newer than this branch's overlay); see docs/orbital-watch/FIX40-SYNC.md
+COPY overlay-fix40/ /overlay-fix40/
+RUN cat /overlay-fix40/part* | base64 -d | tar xz -C /app
 COPY landing-b64/ /landing-b64/
 RUN mkdir -p /app/public/landing && for f in /landing-b64/*.b64; do base64 -d "$f" > /app/public/landing/$(basename "$f" .b64); done
 
